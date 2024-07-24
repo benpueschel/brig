@@ -5,3 +5,10 @@ version = 3
 [[package]]
 name = "brig-common"
 version = "0.0.1"
+
+[[package]]
+name = "brig-diagnostic"
+version = "0.0.1"
+dependencies = [
+ "brig-common",
+]

@@ -1,0 +1,7 @@
+[package]
+name = "brig-diagnostic"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+brig-common = { path = "../brig-common" }
