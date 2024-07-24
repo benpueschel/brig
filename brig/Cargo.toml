@@ -1,0 +1,6 @@
+[package]
+name = "brig"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
