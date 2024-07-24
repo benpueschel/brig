@@ -1,0 +1,11 @@
+[package]
+name = "brig-parser"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+brig-common = { path = "../brig-common" }
+brig-diagnostic = { path = "../brig-diagnostic" }
+brig-ast = { path = "../brig-ast" }
+brig-lexer = { path = "../brig-lexer" }
+brig-macros = { path = "../brig-macros" }

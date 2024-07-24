@@ -6,6 +6,7 @@ members = [
 	"brig-ast",
 	"brig-lexer",
 	"brig-macros",
+	"brig-parser",
 ]
 
 [workspace.package]

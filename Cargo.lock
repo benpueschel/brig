@@ -38,6 +38,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "brig-parser"
+version = "0.0.1"
+dependencies = [
+ "brig-ast",
+ "brig-common",
+ "brig-diagnostic",
+ "brig-lexer",
+ "brig-macros",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
