@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = [ "brig-common", "brig-diagnostic", "brig-ast" ]
+members = [ "brig-common", "brig-diagnostic", "brig-ast", "brig-lexer" ]
 
 [workspace.package]
 version = "0.0.1"

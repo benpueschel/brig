@@ -19,3 +19,11 @@ version = "0.0.1"
 dependencies = [
  "brig-common",
 ]
+
+[[package]]
+name = "brig-lexer"
+version = "0.0.1"
+dependencies = [
+ "brig-common",
+ "brig-diagnostic",
+]
