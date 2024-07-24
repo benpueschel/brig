@@ -3,6 +3,13 @@
 version = 3
 
 [[package]]
+name = "brig-ast"
+version = "0.0.1"
+dependencies = [
+ "brig-common",
+]
+
+[[package]]
 name = "brig-common"
 version = "0.0.1"
 
