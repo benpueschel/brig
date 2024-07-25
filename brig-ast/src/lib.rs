@@ -141,7 +141,7 @@ impl AstNode for VariableDeclaration {
 pub enum Expression {
     Literal(Literal),
     Binary(BinaryExpression),
-    Variable(Identifier),
+    Identifier(Identifier),
 }
 
 impl AstNode for Expression {
@@ -149,7 +149,7 @@ impl AstNode for Expression {
         match self {
             Expression::Literal(l) => l.span,
             Expression::Binary(b) => b.span,
-            Expression::Variable(v) => v.span,
+            Expression::Identifier(v) => v.span,
         }
     }
 }
@@ -174,6 +174,7 @@ pub enum BinaryOperator {
     Subtract,
     Multiply,
     Divide,
+    Assign,
 }
 
 #[derive(Debug, Clone, PartialEq)]
