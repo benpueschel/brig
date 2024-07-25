@@ -6,14 +6,19 @@ impl Parser {
         match token.kind {
             // TODO: return statement
             // TODO: if statement
-            TokenKind::Let => Ok(Statement::VariableDeclaration(
-                self.parse_variable_declaration()?,
-            )),
-            _ => Ok(Statement::Expression(self.parse_expression()?)),
+            TokenKind::Let => self.parse_variable_declaration(),
+            _ => self.parse_expression_statement(),
         }
     }
 
-    pub fn parse_variable_declaration(&mut self) -> Result<VariableDeclaration> {
+    pub fn parse_expression_statement(&mut self) -> Result<Statement> {
+        println!("parse_expression_statement");
+        let expr = self.parse_expression()?;
+        verify_token!(self.eat()?, TokenKind::Semicolon);
+        Ok(Statement::Expression(expr))
+    }
+
+    pub fn parse_variable_declaration(&mut self) -> Result<Statement> {
         // let [name] <: [type]> = [expr];
         let token = self.eat()?;
         let start = token.span;
@@ -23,22 +28,22 @@ impl Parser {
         let ty = self.parse_type()?;
         let token = self.eat()?;
         if let TokenKind::Semicolon = token.kind {
-            return Ok(VariableDeclaration {
+            return Ok(Statement::VariableDeclaration(VariableDeclaration {
                 name,
                 ty,
                 expr: None,
                 span: Span::compose(start, token.span),
-            });
+            }));
         }
 
         let expr = self.parse_expression()?;
+        verify_token!(self.eat()?, TokenKind::Semicolon);
         let span = Span::compose(start, expr.span());
-        Ok(VariableDeclaration {
+        Ok(Statement::VariableDeclaration(VariableDeclaration {
             name,
             ty,
             expr: Some(expr),
             span,
-        })
+        }))
     }
-
 }

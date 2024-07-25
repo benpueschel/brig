@@ -87,7 +87,7 @@ impl Parser {
         if !matches!(self.peek()?.kind, TokenKind::Colon) {
             return Ok(Ty {
                 kind: TyKind::Unspecified,
-                span: self.peek()?.span,
+                span: Span::with_len(self.peek()?.span.start, 0),
             });
         }
 
