@@ -68,9 +68,9 @@ pub fn parse_assignment() {
             expr: Some(Expression::Literal(Literal {
                 value: LiteralValue::U32(5),
                 ty: LiteralType::U32,
-                span: Span::new(11, 11),
+                span: Span::new(10, 11),
             })),
-            span: Span::new(4, 11),
+            span: Span::new(0, 11),
         })
     );
 }
@@ -86,6 +86,7 @@ pub fn parse_function() {
         .parse_function_declaration()
         .expect("Failed to parse function");
 
+    assert_eq!(function.span(), Span::new(0, 29));
     assert_eq!(
         function,
         FunctionDeclaration {
@@ -96,28 +97,28 @@ pub fn parse_function() {
             parameters: vec![],
             return_ty: Ty {
                 kind: TyKind::Unspecified,
-                span: Span::new(8, 8),
+                span: Span::new(10, 10),
             },
             body: Block {
                 statements: vec![Statement::VariableDeclaration(VariableDeclaration {
                     name: Identifier {
                         name: "x".to_string(),
-                        span: Span::new(15, 16),
+                        span: Span::new(24, 25),
                     },
                     ty: Ty {
                         kind: TyKind::Unspecified,
-                        span: Span::new(18, 18),
+                        span: Span::new(26, 26),
                     },
                     expr: Some(Expression::Literal(Literal {
                         value: LiteralValue::U32(5),
                         ty: LiteralType::U32,
-                        span: Span::new(21, 21),
+                        span: Span::new(28, 29),
                     })),
-                    span: Span::new(15, 21),
+                    span: Span::new(20, 29),
                 })],
-                span: Span::new(12, 28),
+                span: Span::new(20, 29),
             },
-            span: Span::new(0, 28),
+            span: Span::new(0, 29),
         }
     );
 }
