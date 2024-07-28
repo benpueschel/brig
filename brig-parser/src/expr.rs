@@ -4,7 +4,7 @@ type ExprFn = fn(&mut Parser) -> Result<Expression>;
 
 impl Parser {
     pub fn parse_expression(&mut self) -> Result<Expression> {
-        self.parse_add_expression()
+        self.parse_assignment_expression()
     }
 
     fn parse_binary_expression(
@@ -25,6 +25,16 @@ impl Parser {
             });
         }
         Ok(left)
+    }
+    pub fn parse_assignment_expression(&mut self) -> Result<Expression> {
+        self.parse_binary_expression(Parser::parse_comparison_expression, |x| {
+            x == TokenKind::Equal
+        })
+    }
+    pub fn parse_comparison_expression(&mut self) -> Result<Expression> {
+        self.parse_binary_expression(Parser::parse_add_expression, |x| {
+            x == TokenKind::LeftCaret || x == TokenKind::RightCaret
+        })
     }
     pub fn parse_add_expression(&mut self) -> Result<Expression> {
         self.parse_binary_expression(Parser::parse_mult_expression, |x| {
@@ -78,6 +88,8 @@ impl Parser {
             TokenKind::Plus => Ok(BinaryOperator::Add),
             TokenKind::Minus => Ok(BinaryOperator::Subtract),
             TokenKind::Equal => Ok(BinaryOperator::Assign),
+            TokenKind::LeftCaret => Ok(BinaryOperator::LessThan),
+            TokenKind::RightCaret => Ok(BinaryOperator::GreaterThan),
 
             x => Err(Error::expected_token(
                 x.to_string(),
@@ -97,6 +109,60 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use crate::*;
+
+    #[test]
+    pub fn parse_assignment_expr() {
+        let input = "x = y";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let expr = parser
+            .parse_expression()
+            .expect("Failed to parse expression");
+
+        assert_eq!(
+            expr,
+            Expression::Binary(BinaryExpression {
+                lhs: Box::new(Expression::Identifier(Identifier {
+                    name: "x".to_string(),
+                    span: Span::new(0, 1),
+                })),
+                rhs: Box::new(Expression::Identifier(Identifier {
+                    name: "y".to_string(),
+                    span: Span::new(4, 5),
+                })),
+                op: BinaryOperator::Assign,
+                span: Span::new(0, 5),
+            })
+        );
+    }
+
+    #[test]
+    pub fn parse_comparison_expr() {
+        let input = "x < 10";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let expr = parser
+            .parse_expression()
+            .expect("Failed to parse expression");
+
+        assert_eq!(
+            expr,
+            Expression::Binary(BinaryExpression {
+                lhs: Box::new(Expression::Identifier(Identifier {
+                    name: "x".to_string(),
+                    span: Span::new(0, 1),
+                })),
+                rhs: Box::new(Expression::Literal(Literal {
+                    value: LiteralValue::U32(10),
+                    ty: LiteralType::U32,
+                    span: Span::new(4, 6),
+                })),
+                op: BinaryOperator::LessThan,
+                span: Span::new(0, 6),
+            })
+        );
+    }
+
     #[test]
     pub fn parse_add_expr() {
         let input = "x + 5";

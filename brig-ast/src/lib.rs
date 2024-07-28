@@ -175,6 +175,8 @@ pub enum BinaryOperator {
     Multiply,
     Divide,
     Assign,
+    LessThan,
+    GreaterThan,
 }
 
 #[derive(Debug, Clone, PartialEq)]
