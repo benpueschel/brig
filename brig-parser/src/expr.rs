@@ -1,14 +1,19 @@
 use crate::*;
 
+type ExprFn = fn(&mut Parser) -> Result<Expression>;
+
 impl Parser {
     pub fn parse_expression(&mut self) -> Result<Expression> {
         self.parse_add_expression()
     }
 
-    pub fn parse_add_expression(&mut self) -> Result<Expression> {
-        let mut left = self.parse_mult_expression()?;
-        let mut peek = self.peek()?;
-        while peek.kind == TokenKind::Plus || peek.kind == TokenKind::Minus {
+    fn parse_binary_expression(
+        &mut self,
+        next: ExprFn,
+        pred: fn(TokenKind) -> bool,
+    ) -> Result<Expression> {
+        let mut left = next(self)?;
+        while pred(self.peek()?.kind) {
             let op = self.parse_binary_operator()?;
             let right = self.parse_expression()?;
             let span = Span::compose(left.span(), right.span());
@@ -18,28 +23,19 @@ impl Parser {
                 op,
                 span,
             });
-            peek = self.peek()?;
         }
         Ok(left)
     }
+    pub fn parse_add_expression(&mut self) -> Result<Expression> {
+        self.parse_binary_expression(Parser::parse_mult_expression, |x| {
+            x == TokenKind::Plus || x == TokenKind::Minus
+        })
+    }
 
     pub fn parse_mult_expression(&mut self) -> Result<Expression> {
-        let mut left = self.parse_primary_expression()?;
-        let mut peek = self.peek()?;
-        while peek.kind == TokenKind::Star || peek.kind == TokenKind::Slash {
-            let op = self.parse_binary_operator()?;
-
-            let right = self.parse_expression()?;
-            let span = Span::compose(left.span(), right.span());
-            left = Expression::Binary(BinaryExpression {
-                lhs: Box::new(left),
-                rhs: Box::new(right),
-                op,
-                span,
-            });
-            peek = self.peek()?;
-        }
-        Ok(left)
+        self.parse_binary_expression(Parser::parse_primary_expression, |x| {
+            x == TokenKind::Star || x == TokenKind::Slash
+        })
     }
 
     pub fn parse_primary_expression(&mut self) -> Result<Expression> {
