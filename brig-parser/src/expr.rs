@@ -155,4 +155,85 @@ mod test {
             })
         );
     }
+
+    #[test]
+    pub fn parse_primary_expr() {
+        let input = "x";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let expr = parser
+            .parse_expression()
+            .expect("Failed to parse expression");
+
+        assert_eq!(
+            expr,
+            Expression::Identifier(Identifier {
+                name: "x".to_string(),
+                span: Span::new(0, 1),
+            })
+        );
+    }
+
+    #[test]
+    pub fn parse_paren_expr() {
+        let input = "(x + 5)";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let expr = parser
+            .parse_expression()
+            .expect("Failed to parse expression");
+
+        assert_eq!(
+            expr,
+            Expression::Binary(BinaryExpression {
+                lhs: Box::new(Expression::Identifier(Identifier {
+                    name: "x".to_string(),
+                    span: Span::new(1, 2),
+                })),
+                rhs: Box::new(Expression::Literal(Literal {
+                    value: LiteralValue::U32(5),
+                    ty: LiteralType::U32,
+                    span: Span::new(5, 6),
+                })),
+                op: BinaryOperator::Add,
+                span: Span::new(1, 6),
+            })
+        );
+    }
+
+    #[test]
+    pub fn parse_mixed_expr() {
+        let input = "x + 5 * 10";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let expr = parser
+            .parse_expression()
+            .expect("Failed to parse expression");
+
+        assert_eq!(
+            expr,
+            Expression::Binary(BinaryExpression {
+                lhs: Box::new(Expression::Identifier(Identifier {
+                    name: "x".to_string(),
+                    span: Span::new(0, 1),
+                })),
+                rhs: Box::new(Expression::Binary(BinaryExpression {
+                    lhs: Box::new(Expression::Literal(Literal {
+                        value: LiteralValue::U32(5),
+                        ty: LiteralType::U32,
+                        span: Span::new(4, 5),
+                    })),
+                    rhs: Box::new(Expression::Literal(Literal {
+                        value: LiteralValue::U32(10),
+                        ty: LiteralType::U32,
+                        span: Span::new(8, 10),
+                    })),
+                    op: BinaryOperator::Multiply,
+                    span: Span::new(4, 10),
+                })),
+                op: BinaryOperator::Add,
+                span: Span::new(0, 10),
+            })
+        );
+    }
 }
