@@ -47,3 +47,35 @@ impl Parser {
         }))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+    #[test]
+    pub fn parse_assignment() {
+        let input = "let var = 5;";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let statement = parser.parse_statement().expect("Failed to parse statement");
+        assert_eq!(
+            statement,
+            Statement::VariableDeclaration(VariableDeclaration {
+                name: Identifier {
+                    name: "var".to_string(),
+                    span: Span::new(4, 7),
+                },
+                ty: Ty {
+                    kind: TyKind::Unspecified,
+                    span: Span::new(8, 8),
+                },
+                expr: Some(Expression::Literal(Literal {
+                    value: LiteralValue::U32(5),
+                    ty: LiteralType::U32,
+                    span: Span::new(10, 11),
+                })),
+                span: Span::new(0, 11),
+            })
+        );
+    }
+}

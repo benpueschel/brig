@@ -4,9 +4,6 @@ use brig_diagnostic::{Error, Result};
 use brig_lexer::{Lexer, Token, TokenKind};
 use brig_macros::verify_token;
 
-#[cfg(test)]
-mod test;
-
 mod decl;
 mod expr;
 mod stmt;
@@ -105,5 +102,57 @@ impl Parser {
             }
             _ => Err(expected_ident(&token)),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+    #[test]
+    pub fn parse_empty_type() {
+        let input = "";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let ty = parser.parse_type().expect("Failed to parse type");
+        assert_eq!(
+            ty,
+            Ty {
+                kind: TyKind::Unspecified,
+                span: Span::new(0, 0),
+            }
+        );
+    }
+
+    #[test]
+    pub fn parse_u32_type() {
+        let input = ": u32";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let ty = parser.parse_type().expect("Failed to parse type");
+        assert_eq!(
+            ty,
+            Ty {
+                kind: TyKind::Literal(LiteralType::U32),
+                span: Span::new(2, 5),
+            }
+        );
+    }
+
+    #[test]
+    pub fn parse_user_type() {
+        let input = ": MyType";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let ty = parser.parse_type().expect("Failed to parse type");
+        assert_eq!(
+            ty,
+            Ty {
+                kind: TyKind::UserDefined(Identifier {
+                    name: "MyType".to_string(),
+                    span: Span::new(2, 8),
+                }),
+                span: Span::new(2, 8),
+            }
+        );
     }
 }

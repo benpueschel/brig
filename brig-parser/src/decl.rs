@@ -70,3 +70,56 @@ impl Parser {
         })
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+
+#[test]
+pub fn parse_function() {
+    let input = "fn test() {
+        let x = 5;
+    }";
+    let lexer = Lexer::new(input.to_string());
+    let mut parser = Parser::new(lexer);
+    let function = parser
+        .parse_function_declaration()
+        .expect("Failed to parse function");
+
+    assert_eq!(function.span(), Span::new(0, 29));
+    assert_eq!(
+        function,
+        FunctionDeclaration {
+            name: Identifier {
+                name: "test".to_string(),
+                span: Span::new(3, 7),
+            },
+            parameters: vec![],
+            return_ty: Ty {
+                kind: TyKind::Unspecified,
+                span: Span::new(10, 10),
+            },
+            body: Block {
+                statements: vec![Statement::VariableDeclaration(VariableDeclaration {
+                    name: Identifier {
+                        name: "x".to_string(),
+                        span: Span::new(24, 25),
+                    },
+                    ty: Ty {
+                        kind: TyKind::Unspecified,
+                        span: Span::new(26, 26),
+                    },
+                    expr: Some(Expression::Literal(Literal {
+                        value: LiteralValue::U32(5),
+                        ty: LiteralType::U32,
+                        span: Span::new(28, 29),
+                    })),
+                    span: Span::new(20, 29),
+                })],
+                span: Span::new(20, 29),
+            },
+            span: Span::new(0, 29),
+        }
+    );
+}
+}

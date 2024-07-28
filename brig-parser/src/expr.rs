@@ -97,3 +97,62 @@ impl Parser {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+    #[test]
+    pub fn parse_add_expr() {
+        let input = "x + 5";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let expr = parser
+            .parse_expression()
+            .expect("Failed to parse expression");
+
+        assert_eq!(
+            expr,
+            Expression::Binary(BinaryExpression {
+                lhs: Box::new(Expression::Identifier(Identifier {
+                    name: "x".to_string(),
+                    span: Span::new(0, 1),
+                })),
+                rhs: Box::new(Expression::Literal(Literal {
+                    value: LiteralValue::U32(5),
+                    ty: LiteralType::U32,
+                    span: Span::new(4, 5),
+                })),
+                op: BinaryOperator::Add,
+                span: Span::new(0, 5),
+            })
+        );
+    }
+
+    #[test]
+    pub fn parse_mult_expr() {
+        let input = "10 * 283";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let expr = parser
+            .parse_expression()
+            .expect("Failed to parse expression");
+
+        assert_eq!(
+            expr,
+            Expression::Binary(BinaryExpression {
+                lhs: Box::new(Expression::Literal(Literal {
+                    value: LiteralValue::U32(10),
+                    ty: LiteralType::U32,
+                    span: Span::new(0, 2),
+                })),
+                rhs: Box::new(Expression::Literal(Literal {
+                    value: LiteralValue::U32(283),
+                    ty: LiteralType::U32,
+                    span: Span::new(5, 8),
+                })),
+                op: BinaryOperator::Multiply,
+                span: Span::new(0, 8),
+            })
+        );
+    }
+}
