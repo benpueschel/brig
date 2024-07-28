@@ -2,7 +2,25 @@ use crate::*;
 
 impl Parser {
     pub fn parse_expression(&mut self) -> Result<Expression> {
-        self.parse_mult_expression()
+        self.parse_add_expression()
+    }
+
+    pub fn parse_add_expression(&mut self) -> Result<Expression> {
+        let mut left = self.parse_mult_expression()?;
+        let mut peek = self.peek()?;
+        while peek.kind == TokenKind::Plus || peek.kind == TokenKind::Minus {
+            let op = self.parse_binary_operator()?;
+            let right = self.parse_expression()?;
+            let span = Span::compose(left.span(), right.span());
+            left = Expression::Binary(BinaryExpression {
+                lhs: Box::new(left),
+                rhs: Box::new(right),
+                op,
+                span,
+            });
+            peek = self.peek()?;
+        }
+        Ok(left)
     }
 
     pub fn parse_mult_expression(&mut self) -> Result<Expression> {
