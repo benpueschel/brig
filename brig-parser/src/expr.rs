@@ -2,16 +2,13 @@ use crate::*;
 
 impl Parser {
     pub fn parse_expression(&mut self) -> Result<Expression> {
-        println!("parse_expression");
         self.parse_mult_expression()
     }
 
     pub fn parse_mult_expression(&mut self) -> Result<Expression> {
-        println!("parse_mult_expression");
         let mut left = self.parse_primary_expression()?;
         let mut peek = self.peek()?;
         while peek.kind == TokenKind::Star || peek.kind == TokenKind::Slash {
-            println!("  {:?}", peek);
             let op = self.parse_binary_operator()?;
 
             let right = self.parse_expression()?;
@@ -29,7 +26,6 @@ impl Parser {
 
     pub fn parse_primary_expression(&mut self) -> Result<Expression> {
         let token = self.eat()?;
-        println!("parse_primary_expression: {:?}", token);
         match token.kind {
             TokenKind::ParenOpen => self.parse_paren_expression(),
             TokenKind::Identifier(_) => Ok(Expression::Identifier(ident_from_token(token)?)),
