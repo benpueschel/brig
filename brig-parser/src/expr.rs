@@ -110,17 +110,21 @@ impl Parser {
 mod test {
     use crate::*;
 
-    #[test]
-    pub fn parse_assignment_expr() {
-        let input = "x = y";
+    fn test_base(input: &str, expected: Expression) {
         let lexer = Lexer::new(input.to_string());
         let mut parser = Parser::new(lexer);
         let expr = parser
             .parse_expression()
             .expect("Failed to parse expression");
 
-        assert_eq!(
-            expr,
+        assert_eq!(expr, expected);
+    }
+
+    #[test]
+    pub fn parse_assignment_expr() {
+        let input = "x = y";
+        test_base(
+            input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
                     name: "x".to_string(),
@@ -132,21 +136,15 @@ mod test {
                 })),
                 op: BinaryOperator::Assign,
                 span: Span::new(0, 5),
-            })
+            }),
         );
     }
 
     #[test]
     pub fn parse_comparison_expr() {
         let input = "x < 10";
-        let lexer = Lexer::new(input.to_string());
-        let mut parser = Parser::new(lexer);
-        let expr = parser
-            .parse_expression()
-            .expect("Failed to parse expression");
-
-        assert_eq!(
-            expr,
+        test_base(
+            input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
                     name: "x".to_string(),
@@ -166,14 +164,8 @@ mod test {
     #[test]
     pub fn parse_add_expr() {
         let input = "x + 5";
-        let lexer = Lexer::new(input.to_string());
-        let mut parser = Parser::new(lexer);
-        let expr = parser
-            .parse_expression()
-            .expect("Failed to parse expression");
-
-        assert_eq!(
-            expr,
+        test_base(
+            input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
                     name: "x".to_string(),
@@ -193,14 +185,8 @@ mod test {
     #[test]
     pub fn parse_mult_expr() {
         let input = "10 * 283";
-        let lexer = Lexer::new(input.to_string());
-        let mut parser = Parser::new(lexer);
-        let expr = parser
-            .parse_expression()
-            .expect("Failed to parse expression");
-
-        assert_eq!(
-            expr,
+        test_base(
+            input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Literal(Literal {
                     value: LiteralValue::U32(10),
@@ -221,14 +207,8 @@ mod test {
     #[test]
     pub fn parse_primary_expr() {
         let input = "x";
-        let lexer = Lexer::new(input.to_string());
-        let mut parser = Parser::new(lexer);
-        let expr = parser
-            .parse_expression()
-            .expect("Failed to parse expression");
-
-        assert_eq!(
-            expr,
+        test_base(
+            input,
             Expression::Identifier(Identifier {
                 name: "x".to_string(),
                 span: Span::new(0, 1),
@@ -239,14 +219,8 @@ mod test {
     #[test]
     pub fn parse_paren_expr() {
         let input = "(x + 5)";
-        let lexer = Lexer::new(input.to_string());
-        let mut parser = Parser::new(lexer);
-        let expr = parser
-            .parse_expression()
-            .expect("Failed to parse expression");
-
-        assert_eq!(
-            expr,
+        test_base(
+            input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
                     name: "x".to_string(),
@@ -266,14 +240,8 @@ mod test {
     #[test]
     pub fn parse_mixed_expr() {
         let input = "x + 5 * 10";
-        let lexer = Lexer::new(input.to_string());
-        let mut parser = Parser::new(lexer);
-        let expr = parser
-            .parse_expression()
-            .expect("Failed to parse expression");
-
-        assert_eq!(
-            expr,
+        test_base(
+            input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
                     name: "x".to_string(),
