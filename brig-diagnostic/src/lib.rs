@@ -16,6 +16,8 @@ pub enum ErrorKind {
     UnexpectedEof,
     /// Expected a type
     ExpectedType,
+    /// Type mismatch - expected, found
+    TypeMismatch((String, Span), (String, Span)),
     /// Identifier is invalid (e.g. using a reserved keyword or starting with a number)
     InvalidIdentifier(String),
     /// Invalid number
@@ -59,6 +61,11 @@ impl Error {
     }
     pub fn expected_type(span: Span) -> Self {
         Self::new(ErrorKind::ExpectedType, span)
+    }
+    pub fn type_mismatch(expected: (impl ToString, Span), found: (impl ToString, Span)) -> Self {
+        let expected = (expected.0.to_string(), expected.1);
+        let found = (found.0.to_string(), found.1);
+        Self::new(ErrorKind::TypeMismatch(expected, found), Span::default())
     }
     pub fn expected_token(token: impl ToString, expected: Vec<String>, span: Span) -> Self {
         Self::new(ErrorKind::ExpectedToken(token.to_string(), expected), span)

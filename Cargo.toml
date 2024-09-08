@@ -8,6 +8,9 @@ members = [
 	"brig-macros",
 	"brig-parser",
 	"brig",
+	"brig-ir",
+	"brig-type-checker",
+	"brig-ty",
 ]
 
 [workspace.package]

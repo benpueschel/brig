@@ -1,0 +1,7 @@
+[package]
+name = "brig-ty"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lazy_static = "1.5.0"

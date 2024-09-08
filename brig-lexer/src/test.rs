@@ -12,6 +12,22 @@ fn test_lexer(input: &str, expected: Vec<Token>) {
 }
 
 #[test]
+fn test_whitespaces() {
+    let program = "fn  \t\n  main() \t\n  {  \t\n  }";
+    test_lexer(
+        program,
+        vec![
+            Token::with_len(TokenKind::Fn, 0, 2),
+            Token::with_len(TokenKind::Identifier("main".to_string()), 8, 4),
+            Token::with_len(TokenKind::ParenOpen, 12, 1),
+            Token::with_len(TokenKind::ParenClose, 13, 1),
+            Token::with_len(TokenKind::BraceOpen, 19, 1),
+            Token::with_len(TokenKind::BraceClose, 26, 1),
+        ],
+    );
+}
+
+#[test]
 fn test_invalid_number() {
     let program = "1abc";
     let mut lexer = Lexer::new(program.to_string());

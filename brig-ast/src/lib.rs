@@ -1,3 +1,5 @@
+use std::fmt::{self, Display};
+
 use brig_common::Span;
 
 pub trait AstNode {
@@ -160,6 +162,7 @@ pub struct BinaryExpression {
     pub rhs: Box<Expression>,
     pub op: BinaryOperator,
     pub span: Span,
+    pub ty_kind: Option<TyKind>,
 }
 
 impl AstNode for BinaryExpression {
@@ -199,6 +202,8 @@ impl AstNode for Literal {
 pub enum LiteralValue {
     /// A 32-bit unsigned integer.
     U32(u32),
+    /// An unsigned integer the size of a pointer for the target architecture.
+    Usize(usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -253,10 +258,32 @@ pub enum TyKind {
     Unspecified,
 }
 
+impl Display for TyKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TyKind::Literal(l) => write!(f, "{}", l),
+            TyKind::UserDefined(ident) => write!(f, "{}", ident.name),
+            TyKind::Unspecified => write!(f, "unspecified"),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LiteralType {
     /// A 32-bit unsigned integer.
     U32,
+    /// An unsigned integer the size of a pointer for the target architecture.
+    Usize,
     /// The unit type. Equivalent to `void` in C-like languages.
     Unit,
+}
+
+impl Display for LiteralType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LiteralType::U32 => write!(f, "u32"),
+            LiteralType::Usize => write!(f, "usize"),
+            LiteralType::Unit => write!(f, "()"),
+        }
+    }
 }

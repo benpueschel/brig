@@ -10,16 +10,17 @@ impl Parser {
     fn parse_binary_expression(
         &mut self,
         next: ExprFn,
-        pred: fn(TokenKind) -> bool,
+        pred: fn(this: &Self) -> Result<bool>,
     ) -> Result<Expression> {
         let mut left = next(self)?;
-        while pred(self.peek()?.kind) {
+        while pred(self)? {
             let op = self.parse_binary_operator()?;
             let right = self.parse_expression()?;
             let span = Span::compose(left.span(), right.span());
             left = Expression::Binary(BinaryExpression {
                 lhs: Box::new(left),
                 rhs: Box::new(right),
+                ty_kind: None,
                 op,
                 span,
             });
@@ -27,24 +28,28 @@ impl Parser {
         Ok(left)
     }
     pub fn parse_assignment_expression(&mut self) -> Result<Expression> {
-        self.parse_binary_expression(Parser::parse_comparison_expression, |x| {
-            x == TokenKind::Equal
+        self.parse_binary_expression(Parser::parse_comparison_expression, |this| {
+            let x = this.peek()?.kind;
+            Ok(x == TokenKind::Equal)
         })
     }
     pub fn parse_comparison_expression(&mut self) -> Result<Expression> {
-        self.parse_binary_expression(Parser::parse_add_expression, |x| {
-            x == TokenKind::LeftCaret || x == TokenKind::RightCaret
+        self.parse_binary_expression(Parser::parse_add_expression, |this| {
+            let x = this.peek()?.kind;
+            Ok(x == TokenKind::LeftCaret || x == TokenKind::RightCaret)
         })
     }
     pub fn parse_add_expression(&mut self) -> Result<Expression> {
-        self.parse_binary_expression(Parser::parse_mult_expression, |x| {
-            x == TokenKind::Plus || x == TokenKind::Minus
+        self.parse_binary_expression(Parser::parse_mult_expression, |this| {
+            let x = this.peek()?.kind;
+            Ok(x == TokenKind::Plus || x == TokenKind::Minus)
         })
     }
 
     pub fn parse_mult_expression(&mut self) -> Result<Expression> {
-        self.parse_binary_expression(Parser::parse_primary_expression, |x| {
-            x == TokenKind::Star || x == TokenKind::Slash
+        self.parse_binary_expression(Parser::parse_primary_expression, |this| {
+            let x = this.peek()?.kind;
+            Ok(x == TokenKind::Star || x == TokenKind::Slash)
         })
     }
 
@@ -136,6 +141,7 @@ mod test {
                 })),
                 op: BinaryOperator::Assign,
                 span: Span::new(0, 5),
+                ty_kind: None,
             }),
         );
     }
@@ -157,7 +163,8 @@ mod test {
                 })),
                 op: BinaryOperator::LessThan,
                 span: Span::new(0, 6),
-            })
+                ty_kind: None,
+            }),
         );
     }
 
@@ -178,7 +185,8 @@ mod test {
                 })),
                 op: BinaryOperator::Add,
                 span: Span::new(0, 5),
-            })
+                ty_kind: None,
+            }),
         );
     }
 
@@ -200,7 +208,8 @@ mod test {
                 })),
                 op: BinaryOperator::Multiply,
                 span: Span::new(0, 8),
-            })
+                ty_kind: None,
+            }),
         );
     }
 
@@ -212,28 +221,39 @@ mod test {
             Expression::Identifier(Identifier {
                 name: "x".to_string(),
                 span: Span::new(0, 1),
-            })
+            }),
         );
     }
 
     #[test]
     pub fn parse_paren_expr() {
-        let input = "(x + 5)";
+        let input = "(x + 5) * 3";
         test_base(
             input,
             Expression::Binary(BinaryExpression {
-                lhs: Box::new(Expression::Identifier(Identifier {
-                    name: "x".to_string(),
-                    span: Span::new(1, 2),
+                lhs: Box::new(Expression::Binary(BinaryExpression {
+                    lhs: Box::new(Expression::Identifier(Identifier {
+                        name: "x".to_string(),
+                        span: Span::new(1, 2),
+                    })),
+                    rhs: Box::new(Expression::Literal(Literal {
+                        value: LiteralValue::U32(5),
+                        ty: LiteralType::U32,
+                        span: Span::new(5, 6),
+                    })),
+                    op: BinaryOperator::Add,
+                    span: Span::new(1, 6),
+                    ty_kind: None,
                 })),
                 rhs: Box::new(Expression::Literal(Literal {
-                    value: LiteralValue::U32(5),
+                    value: LiteralValue::U32(3),
                     ty: LiteralType::U32,
-                    span: Span::new(5, 6),
+                    span: Span::new(10, 11),
                 })),
-                op: BinaryOperator::Add,
-                span: Span::new(1, 6),
-            })
+                op: BinaryOperator::Multiply,
+                ty_kind: None,
+                span: Span::new(1, 11),
+            }),
         );
     }
 
@@ -260,10 +280,12 @@ mod test {
                     })),
                     op: BinaryOperator::Multiply,
                     span: Span::new(4, 10),
+                    ty_kind: None,
                 })),
                 op: BinaryOperator::Add,
                 span: Span::new(0, 10),
-            })
+                ty_kind: None,
+            }),
         );
     }
 }
