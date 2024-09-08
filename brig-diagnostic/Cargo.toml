@@ -5,3 +5,4 @@ edition.workspace = true
 
 [dependencies]
 brig-common = { path = "../brig-common" }
+ariadne = { version = "0.4.1", features = ["auto-color"] }

@@ -5,6 +5,7 @@ use std::io::ErrorKind as IoErrorKind;
 use std::path::Path;
 use std::result::Result as StdResult;
 
+use ariadne::{ColorGenerator, Label, ReportKind};
 use brig_common::span::Span;
 use brig_common::Position;
 
@@ -107,6 +108,86 @@ impl Error {
     }
     pub fn with_span(self, span: Span) -> Self {
         Self { span, ..self }
+    }
+
+    pub fn report(&self) -> ariadne::Report {
+        let mut colors = ColorGenerator::new();
+        let builder = ariadne::Report::build(ReportKind::Error, (), self.span.start);
+        match &self.kind {
+            ErrorKind::UnexpectedEof => builder.with_message("Unexpected end of file").finish(),
+            ErrorKind::ExpectedType => builder
+                .with_label(
+                    Label::new(self.span.start..self.span.end).with_message("Expected a type"),
+                )
+                .finish(),
+            ErrorKind::TypeMismatch(expected, got) => {
+                let a = colors.next();
+                let b = colors.next();
+                builder
+                    .with_label(
+                        Label::new(expected.1.start..expected.1.end)
+                            .with_message(format!("Expected type '{}'", expected.0))
+                            .with_color(a),
+                    )
+                    .with_label(
+                        Label::new(got.1.start..got.1.end)
+                            .with_message(format!("Found type '{}'", got.0))
+                            .with_color(b),
+                    )
+                    .with_message("Type mismatch")
+                    .finish()
+            }
+            ErrorKind::InvalidIdentifier(ident) => builder
+                .with_label(
+                    Label::new(self.span.start..self.span.end)
+                        .with_message(format!("Invalid identifier '{}'", ident)),
+                )
+                .finish(),
+            ErrorKind::InvalidNumber(num) => builder
+                .with_label(
+                    Label::new(self.span.start..self.span.end)
+                        .with_message(format!("Invalid number '{}'", num)),
+                )
+                .finish(),
+            ErrorKind::UnexpectedSymbol(symbol) => builder
+                .with_label(
+                    Label::new(self.span.start..self.span.end)
+                        .with_message(format!("Unexpected symbol '{}'", symbol)),
+                )
+                .finish(),
+            ErrorKind::UnexpectedToken(token) => builder
+                .with_label(
+                    Label::new(self.span.start..self.span.end)
+                        .with_message(format!("Unexpected token '{}'", token)),
+                )
+                .finish(),
+            ErrorKind::ExpectedToken(got, expected) => {
+                let a = colors.next();
+                let b = colors.next();
+                builder
+                    .with_label(
+                        Label::new(self.span.start..self.span.end)
+                            .with_message(format!("Expected one of: '{}'", expected.join(", ")))
+                            .with_color(a),
+                    )
+                    .with_label(
+                        Label::new(self.span.start..self.span.end)
+                            .with_message(format!("Found '{}'", got))
+                            .with_color(b),
+                    )
+                    .with_message("Unexpected token")
+                    .finish()
+            }
+            ErrorKind::ResourceNotFound(res) => builder
+                .with_label(
+                    Label::new(self.span.start..self.span.end)
+                        .with_message(format!("Resource not found: '{}'", res)),
+                )
+                .finish(),
+            ErrorKind::Other(msg) => builder
+                .with_label(Label::new(self.span.start..self.span.end).with_message(msg))
+                .finish(),
+        }
     }
 }
 
