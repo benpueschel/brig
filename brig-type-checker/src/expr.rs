@@ -1,5 +1,6 @@
 use brig_ast::{
-    BinaryExpression, Expression, Literal, LiteralType, LiteralValue, Ty, TyKind, UintType,
+    BinaryExpression, Expression, Literal, LiteralType, LiteralValue, Ty, TyKind,
+    UintType,
 };
 use brig_common::Span;
 use brig_diagnostic::{Error, Result};
@@ -106,10 +107,9 @@ impl TypeChecker {
         ty: Option<&Ty>,
     ) -> Result<Ty> {
         let lhs = self.check_expression(&mut expr.lhs, ty)?;
-        let rhs = self.check_expression(&mut expr.rhs, ty)?;
+        let rhs = self.check_expression(&mut expr.rhs, Some(&lhs))?;
         let span = Span::compose(lhs.span, rhs.span);
         if lhs.kind != rhs.kind {
-            eprintln!("lhs: {:#?}, rhs: {:#?}", lhs, rhs);
             return Err(Error::type_mismatch(
                 (lhs.kind, lhs.span),
                 (rhs.kind, rhs.span),

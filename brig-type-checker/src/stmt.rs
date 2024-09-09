@@ -14,8 +14,6 @@ impl TypeChecker {
     pub fn check_variable_declaration(&mut self, decl: &mut VariableDeclaration) -> Result<()> {
         if let Some(ref mut expr) = decl.expr {
             let ty = self.check_expression(expr, Some(&decl.ty))?;
-            println!("ty: {:#?}", ty);
-            println!("decl.ty: {:#?}", decl.ty);
             if ty.kind != decl.ty.kind {
                 return Err(Error::type_mismatch(
                     (ty.kind, ty.span),

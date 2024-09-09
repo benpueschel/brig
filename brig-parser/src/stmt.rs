@@ -12,7 +12,6 @@ impl Parser {
     }
 
     pub fn parse_expression_statement(&mut self) -> Result<Statement> {
-        println!("parse_expression_statement");
         let expr = self.parse_expression()?;
         verify_token!(self.eat()?, TokenKind::Semicolon);
         Ok(Statement::Expression(expr))
