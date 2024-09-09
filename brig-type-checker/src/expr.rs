@@ -1,5 +1,5 @@
 use brig_ast::{
-    BinaryExpression, Expression, Literal, LiteralType, LiteralValue, Ty, TyKind,
+    BinaryExpression, CallExpression, Expression, Literal, LiteralType, LiteralValue, Ty, TyKind,
     UintType,
 };
 use brig_common::Span;
@@ -14,21 +14,22 @@ impl TypeChecker {
         match expr {
             Expression::Binary(ref mut e) => self.check_binary_expression(e, ty),
             Expression::Literal(ref mut lit) => self.check_literal(lit, ty),
+            Expression::Call(ref mut call) => self.check_call_expression(call, ty),
             Expression::Identifier(ref ident) => {
-                let kind = self.get_symbol(&ident.name).ok_or(Error::other(
+                let ident_ty = self.get_symbol(&ident.name).ok_or(Error::other(
                     format!("Could not find type for '{}'", &ident.name),
                     ident.span,
                 ))?;
                 if let Some(ty) = ty {
-                    if kind != ty.kind {
+                    if ident_ty.kind != ty.kind {
                         return Err(Error::type_mismatch(
                             (ty.kind.clone(), ty.span),
-                            (kind.clone(), ident.span),
+                            (ident_ty.kind.clone(), ident.span),
                         ));
                     }
                 }
                 Ok(Ty {
-                    kind,
+                    kind: ident_ty.kind.clone(),
                     span: ident.span,
                 })
             }
@@ -94,11 +95,53 @@ impl TypeChecker {
                         (u_ty.name.to_string(), u_ty.span),
                     ))
                 }
+                TyKind::Function(fn_ty) => Err(Error::type_mismatch(
+                    (ty.kind.to_string(), ty.span),
+                    (fn_ty.name.to_string(), lit.span),
+                )),
                 TyKind::Unspecified => self.lit_default(lit),
             }
         } else {
             self.lit_default(lit)
         }
+    }
+
+    pub fn check_call_expression(&self, call: &mut CallExpression, _ty: Option<&Ty>) -> Result<Ty> {
+        let call_def = self.get_symbol(&call.callee.name).ok_or(Error::other(
+            format!("Could not find function '{}'", &call.callee),
+            call.span,
+        ))?;
+
+        let fn_ty = match &call_def.kind {
+            TyKind::Function(fn_ty) => fn_ty.clone(),
+            _ => {
+                return Err(Error::other(
+                    format!("'{}' is not a function", &call.callee),
+                    call.span,
+                ))
+            }
+        };
+
+        // Check if the number of arguments match the expected number
+        if call.args.len() != fn_ty.args.len() {
+            return Err(Error::other(
+                format!(
+                    "Expected {} arguments, got {}",
+                    fn_ty.args.len(),
+                    call.args.len()
+                ),
+                call.span,
+            ));
+        }
+        // Check if the arguments match the expected types
+        for (arg, ty) in call.args.iter_mut().zip(fn_ty.args.iter()) {
+            self.check_expression(arg, Some(ty))?;
+        }
+
+        call.fn_ty = Some(fn_ty.clone());
+
+        // Call expressions have the type of the return type of the function
+        Ok(*fn_ty.ret)
     }
 
     pub fn check_binary_expression(
@@ -149,9 +192,6 @@ mod test {
             span: Span::new(0, 17),
         };
         let mut tc = TypeChecker::default();
-        // TODO: refactor this. I don't want to manually push a scope here, but because we're only
-        // parsing a single statement, that's kinda the only way to do it right now.
-        tc.push_scope();
         tc.check_variable_declaration(&mut decl)
             .expect("type check failed");
 
@@ -189,9 +229,6 @@ mod test {
             span: Span::new(0, 15),
         };
         let mut tc = TypeChecker::default();
-        // TODO: refactor this. I don't want to manually push a scope here, but because we're only
-        // parsing a single statement, that's kinda the only way to do it right now.
-        tc.push_scope();
         tc.check_variable_declaration(&mut decl)
             .expect("type check failed");
 

@@ -47,10 +47,61 @@ impl Parser {
     }
 
     pub fn parse_mult_expression(&mut self) -> Result<Expression> {
-        self.parse_binary_expression(Parser::parse_primary_expression, |this| {
+        self.parse_binary_expression(Parser::parse_call_expression, |this| {
             let x = this.peek()?.kind;
             Ok(x == TokenKind::Star || x == TokenKind::Slash)
         })
+    }
+
+    pub fn parse_call_expression(&mut self) -> Result<Expression> {
+        // TODO: for now, we don't support namespacing or structs with methods or fancy stuff
+        // like that. We'd need to parse all that into a PathExpression, then parse the call
+        // on that path.
+        // For now, we'll just parse a single identifier as the callee.
+
+        let token = self.peek()?;
+        let mut span = token.span;
+
+        let callee = ident_from_token(token);
+        if callee.is_err() {
+            // This doesn't look like a call expression, so just parse the primary expression
+            // and return it.
+            return self.parse_primary_expression();
+        }
+        let callee = callee.unwrap();
+        let _ = self.eat()?; // eat the identifier
+
+        if self.peek()?.kind != TokenKind::ParenOpen {
+            // This isn't a call expression, so just return the callee as an identifier.
+            return Ok(Expression::Identifier(callee));
+        }
+        let _ = self.eat()?; // eat the paren open
+
+        // TODO: move all this into a separate function - parse_punctuated_list
+        let mut args = Vec::new();
+        loop {
+            let token = self.peek()?;
+            span = Span::compose(span, token.span);
+            if token.kind == TokenKind::ParenClose {
+                let _ = self.eat()?;
+                break;
+            }
+            let expr = self.parse_expression()?;
+            args.push(expr);
+            let token = self.peek()?;
+            if token.kind == TokenKind::Comma {
+                let _ = self.eat()?;
+            }
+        }
+
+        let fn_ty = None;
+
+        Ok(Expression::Call(CallExpression {
+            callee,
+            args,
+            fn_ty,
+            span,
+        }))
     }
 
     pub fn parse_primary_expression(&mut self) -> Result<Expression> {

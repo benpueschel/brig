@@ -141,6 +141,7 @@ impl AstNode for VariableDeclaration {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
+    Call(CallExpression),
     Literal(Literal),
     Binary(BinaryExpression),
     Identifier(Identifier),
@@ -152,8 +153,17 @@ impl AstNode for Expression {
             Expression::Literal(l) => l.span,
             Expression::Binary(b) => b.span,
             Expression::Identifier(v) => v.span,
+            Expression::Call(c) => c.span,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallExpression {
+    pub callee: Identifier,
+    pub args: Vec<Expression>,
+    pub fn_ty: Option<FnTy>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -233,6 +243,12 @@ pub struct Identifier {
     pub span: Span,
 }
 
+impl Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 impl AstNode for Identifier {
     fn span(&self) -> Span {
         self.span
@@ -257,13 +273,39 @@ pub enum TyKind {
     Literal(LiteralType),
     /// A user-defined type.
     UserDefined(Identifier),
+    /// A function type.
+    Function(FnTy),
     /// A type the user didn't specify.
     Unspecified,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FnTy {
+    pub name: String,
+    pub args: Vec<Ty>,
+    pub ret: Box<Ty>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Field {
+    pub name: String,
+    pub ty: Ty,
 }
 
 impl Display for TyKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            TyKind::Function(func) => {
+                write!(f, "fn {}(", func.name)?;
+                for (i, arg) in func.args.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", arg.kind)?;
+                }
+                write!(f, "): {}", func.ret.kind)
+            }
             TyKind::Literal(l) => write!(f, "{}", l),
             TyKind::UserDefined(ident) => write!(f, "{}", ident.name),
             TyKind::Unspecified => write!(f, "unspecified"),

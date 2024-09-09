@@ -5,9 +5,13 @@ use brig_type_checker::TypeChecker;
 
 fn main() {
     let input = r#"
+fn foo(x: usize): usize {
+    x = x - 5;
+}
+
 fn main() {
     let x: usize = 10;
-    x = 15 + 10;
+    x = 15 + foo(x - 5);
 }
 "#;
 

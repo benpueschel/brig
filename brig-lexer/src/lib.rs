@@ -52,6 +52,7 @@ pub enum TokenKind {
     BracketClose,
     BraceOpen,
     BraceClose,
+    Comma,
     Semicolon,
     Colon,
     EOF,
@@ -93,6 +94,7 @@ impl TokenKind {
             TokenKind::BracketClose => "]",
             TokenKind::BraceOpen => "{",
             TokenKind::BraceClose => "}",
+            TokenKind::Comma => ",",
             TokenKind::Semicolon => ";",
             TokenKind::Colon => ":",
             TokenKind::EOF => "EOF",
@@ -141,6 +143,7 @@ impl Lexer {
         };
 
         match next {
+            ',' => Ok(Token::single(TokenKind::Comma, i)),
             ';' => Ok(Token::single(TokenKind::Semicolon, i)),
             ':' => Ok(Token::single(TokenKind::Colon, i)),
             '=' => Ok(Token::single(TokenKind::Equal, i)),

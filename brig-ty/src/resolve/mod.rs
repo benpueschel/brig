@@ -60,6 +60,7 @@ pub fn parse_ast_ty(ty: &brig_ast::Ty) -> Result<Ty> {
                 None => return Err(Error::other(format!("unknown type: {name}"), ident.span)),
             }
         }
+        brig_ast::TyKind::Function(_) => todo!("Function type"),
         brig_ast::TyKind::Unspecified => todo!("Unspecified type"),
     };
 

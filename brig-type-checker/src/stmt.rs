@@ -20,7 +20,7 @@ impl TypeChecker {
                     (decl.ty.kind.clone(), decl.span),
                 ));
             }
-            self.add_symbol(decl.name.name.clone(), ty.kind);
+            self.add_symbol(decl.name.name.clone(), ty);
         }
         Ok(())
     }
@@ -52,9 +52,6 @@ mod test {
             span: Span::new(0, 15),
         };
         let mut tc = TypeChecker::default();
-        // TODO: refactor this. I don't want to manually push a scope here, but because we're only
-        // parsing a single statement, that's kinda the only way to do it right now.
-        tc.push_scope();
         tc.check_variable_declaration(&mut decl)
             .expect("type check failed");
 
