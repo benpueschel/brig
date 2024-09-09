@@ -238,8 +238,8 @@ impl Lexer {
 
         let mut i = 0;
         for c in data.chars() {
-            static TERMINATORS: [char; 9] = [';', ':', '=', '(', ')', '[', ']', '{', '}'];
-            if c.is_whitespace() || TERMINATORS.contains(&c) {
+            // TODO: support _ and . in numbers
+            if !c.is_numeric() {
                 break;
             }
             i += 1;

@@ -28,11 +28,32 @@ fn test_whitespaces() {
 }
 
 #[test]
+fn test_no_whitespaces() {
+    let program = "x+2*3";
+    test_lexer(
+        program,
+        vec![
+            Token::with_len(TokenKind::Identifier("x".to_string()), 0, 1),
+            Token::with_len(TokenKind::Plus, 1, 1),
+            Token::with_len(TokenKind::Integer(2), 2, 1),
+            Token::with_len(TokenKind::Star, 3, 1),
+            Token::with_len(TokenKind::Integer(3), 4, 1),
+        ],
+    );
+}
+
+#[test]
 fn test_invalid_number() {
     let program = "1abc";
     let mut lexer = Lexer::new(program.to_string());
-    let error = lexer.tokenize().expect_err("expected error");
-    assert_eq!(error, Error::invalid_number("1abc", Span::with_len(0, 4)));
+    let error = lexer.tokenize().expect("couldn't tokenize");
+    assert_eq!(
+        error,
+        vec![
+            Token::with_len(TokenKind::Integer(1), 0, 1),
+            Token::with_len(TokenKind::Identifier("abc".to_string()), 1, 3)
+        ]
+    );
 }
 
 #[test]
