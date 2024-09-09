@@ -200,10 +200,13 @@ impl AstNode for Literal {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
-    /// A 32-bit unsigned integer.
-    U32(u32),
-    /// An unsigned integer the size of a pointer for the target architecture.
-    Usize(usize),
+    Int(IntLit),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IntLit {
+    /// The value of the integer literal.
+    pub value: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -270,20 +273,37 @@ impl Display for TyKind {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum LiteralType {
+    /// Various unsigned integer types, like `u32`.
+    Uint(UintType),
+    /// The unit type. Equivalent to `void` in C-like languages.
+    Unit,
+    /// A type that has not been resolved yet.
+    Unresolved,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum UintType {
     /// A 32-bit unsigned integer.
     U32,
     /// An unsigned integer the size of a pointer for the target architecture.
     Usize,
-    /// The unit type. Equivalent to `void` in C-like languages.
-    Unit,
+}
+
+impl Display for UintType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UintType::U32 => write!(f, "u32"),
+            UintType::Usize => write!(f, "usize"),
+        }
+    }
 }
 
 impl Display for LiteralType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LiteralType::U32 => write!(f, "u32"),
-            LiteralType::Usize => write!(f, "usize"),
+            LiteralType::Uint(uint) => write!(f, "{}", uint),
             LiteralType::Unit => write!(f, "()"),
+            LiteralType::Unresolved => write!(f, "unresolved"),
         }
     }
 }

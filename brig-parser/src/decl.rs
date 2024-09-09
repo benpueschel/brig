@@ -110,8 +110,8 @@ pub fn parse_function() {
                         span: Span::new(26, 26),
                     },
                     expr: Some(Expression::Literal(Literal {
-                        value: LiteralValue::U32(5),
-                        ty: LiteralType::U32,
+                        value: LiteralValue::Int(IntLit { value: 5 }),
+                        ty: LiteralType::Unresolved,
                         span: Span::new(28, 29),
                     })),
                     span: Span::new(20, 29),

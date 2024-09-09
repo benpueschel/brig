@@ -109,8 +109,8 @@ impl Parser {
                 let ident = ident_from_token(self.eat()?)?;
                 let span = ident.span;
                 let kind = match ident.name.as_str() {
-                    "u32" => TyKind::Literal(LiteralType::U32),
-                    "usize" => TyKind::Literal(LiteralType::Usize),
+                    "u32" => TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                    "usize" => TyKind::Literal(LiteralType::Uint(UintType::Usize)),
                     _ => TyKind::UserDefined(ident),
                 };
                 Ok(Ty { kind, span })
@@ -147,7 +147,7 @@ mod test {
         assert_eq!(
             ty,
             Ty {
-                kind: TyKind::Literal(LiteralType::Usize),
+                kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
                 span: Span::new(2, 7),
             }
         );
@@ -162,7 +162,7 @@ mod test {
         assert_eq!(
             ty,
             Ty {
-                kind: TyKind::Literal(LiteralType::U32),
+                kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
                 span: Span::new(2, 5),
             }
         );

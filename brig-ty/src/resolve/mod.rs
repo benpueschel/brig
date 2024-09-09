@@ -44,9 +44,14 @@ pub fn populate_global_decls(program: &Program) -> Result<()> {
 pub fn parse_ast_ty(ty: &brig_ast::Ty) -> Result<Ty> {
     let kind = match &ty.kind {
         brig_ast::TyKind::Literal(lit) => match lit {
-            brig_ast::LiteralType::U32 => TyKind::Uint(UintTy::U32),
-            brig_ast::LiteralType::Usize => TyKind::Uint(UintTy::Usize),
+            brig_ast::LiteralType::Uint(uint) => match uint {
+                brig_ast::UintType::U32 => TyKind::Uint(UintTy::U32),
+                brig_ast::UintType::Usize => TyKind::Uint(UintTy::Usize),
+            },
             brig_ast::LiteralType::Unit => TyKind::Unit,
+            brig_ast::LiteralType::Unresolved => {
+                return Err(Error::other("unresolved literal type", ty.span))
+            }
         },
         brig_ast::TyKind::UserDefined(ident) => {
             let name = &ident.name;

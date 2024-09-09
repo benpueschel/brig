@@ -59,9 +59,8 @@ impl Parser {
             TokenKind::ParenOpen => self.parse_paren_expression(),
             TokenKind::Identifier(_) => Ok(Expression::Identifier(ident_from_token(token)?)),
             TokenKind::Integer(value) => Ok(Expression::Literal(Literal {
-                // TODO: don't default to U32
-                value: LiteralValue::U32(value as u32),
-                ty: LiteralType::U32,
+                value: LiteralValue::Int(IntLit { value }),
+                ty: LiteralType::Unresolved,
                 span: token.span,
             })),
             x => Err(Error::expected_token(
@@ -157,8 +156,8 @@ mod test {
                     span: Span::new(0, 1),
                 })),
                 rhs: Box::new(Expression::Literal(Literal {
-                    value: LiteralValue::U32(10),
-                    ty: LiteralType::U32,
+                    value: LiteralValue::Int(IntLit { value: 10 }),
+                    ty: LiteralType::Unresolved,
                     span: Span::new(4, 6),
                 })),
                 op: BinaryOperator::LessThan,
@@ -179,8 +178,8 @@ mod test {
                     span: Span::new(0, 1),
                 })),
                 rhs: Box::new(Expression::Literal(Literal {
-                    value: LiteralValue::U32(5),
-                    ty: LiteralType::U32,
+                    value: LiteralValue::Int(IntLit { value: 5 }),
+                    ty: LiteralType::Unresolved,
                     span: Span::new(4, 5),
                 })),
                 op: BinaryOperator::Add,
@@ -197,13 +196,13 @@ mod test {
             input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Literal(Literal {
-                    value: LiteralValue::U32(10),
-                    ty: LiteralType::U32,
+                    value: LiteralValue::Int(IntLit { value: 10 }),
+                    ty: LiteralType::Unresolved,
                     span: Span::new(0, 2),
                 })),
                 rhs: Box::new(Expression::Literal(Literal {
-                    value: LiteralValue::U32(283),
-                    ty: LiteralType::U32,
+                    value: LiteralValue::Int(IntLit { value: 283 }),
+                    ty: LiteralType::Unresolved,
                     span: Span::new(5, 8),
                 })),
                 op: BinaryOperator::Multiply,
@@ -237,8 +236,8 @@ mod test {
                         span: Span::new(1, 2),
                     })),
                     rhs: Box::new(Expression::Literal(Literal {
-                        value: LiteralValue::U32(5),
-                        ty: LiteralType::U32,
+                        value: LiteralValue::Int(IntLit { value: 5 }),
+                        ty: LiteralType::Unresolved,
                         span: Span::new(5, 6),
                     })),
                     op: BinaryOperator::Add,
@@ -246,13 +245,45 @@ mod test {
                     ty_kind: None,
                 })),
                 rhs: Box::new(Expression::Literal(Literal {
-                    value: LiteralValue::U32(3),
-                    ty: LiteralType::U32,
+                    value: LiteralValue::Int(IntLit { value: 3 }),
+                    ty: LiteralType::Unresolved,
                     span: Span::new(10, 11),
                 })),
                 op: BinaryOperator::Multiply,
                 ty_kind: None,
                 span: Span::new(1, 11),
+            }),
+        );
+    }
+
+    #[test]
+    pub fn parse_assignment_binary_expr() {
+        let input = "x = 5 + 10";
+        test_base(
+            input,
+            Expression::Binary(BinaryExpression {
+                lhs: Box::new(Expression::Identifier(Identifier {
+                    name: "x".to_string(),
+                    span: Span::new(0, 1),
+                })),
+                rhs: Box::new(Expression::Binary(BinaryExpression {
+                    lhs: Box::new(Expression::Literal(Literal {
+                        value: LiteralValue::Int(IntLit { value: 5 }),
+                        ty: LiteralType::Unresolved,
+                        span: Span::new(4, 5),
+                    })),
+                    rhs: Box::new(Expression::Literal(Literal {
+                        value: LiteralValue::Int(IntLit { value: 10 }),
+                        ty: LiteralType::Unresolved,
+                        span: Span::new(8, 10),
+                    })),
+                    op: BinaryOperator::Add,
+                    span: Span::new(4, 10),
+                    ty_kind: None,
+                })),
+                op: BinaryOperator::Assign,
+                span: Span::new(0, 10),
+                ty_kind: None,
             }),
         );
     }
@@ -269,13 +300,13 @@ mod test {
                 })),
                 rhs: Box::new(Expression::Binary(BinaryExpression {
                     lhs: Box::new(Expression::Literal(Literal {
-                        value: LiteralValue::U32(5),
-                        ty: LiteralType::U32,
+                        value: LiteralValue::Int(IntLit { value: 5 }),
+                        ty: LiteralType::Unresolved,
                         span: Span::new(4, 5),
                     })),
                     rhs: Box::new(Expression::Literal(Literal {
-                        value: LiteralValue::U32(10),
-                        ty: LiteralType::U32,
+                        value: LiteralValue::Int(IntLit { value: 10 }),
+                        ty: LiteralType::Unresolved,
                         span: Span::new(8, 10),
                     })),
                     op: BinaryOperator::Multiply,

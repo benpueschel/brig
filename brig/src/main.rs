@@ -6,7 +6,7 @@ use brig_type_checker::TypeChecker;
 fn main() {
     let input = r#"
 fn main() {
-    let x: u32 = 10;
+    let x: usize = 10;
     x = 15 + 10;
 }
 "#;
@@ -17,7 +17,7 @@ fn main() {
         .parse_program()
         .map_err(|err| report_error(err, input))
         .unwrap();
-    TypeChecker
+    TypeChecker::default()
         .check_program(&mut program)
         .map_err(|err| report_error(err, input))
         .unwrap();
