@@ -184,7 +184,7 @@ impl Display for Statement {
 impl Display for Lvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Lvalue::Variable(x) => write!(f, "{}", x.name),
+            Lvalue::Variable(x) => write!(f, "{}({:x})", x.name, x.id),
             Lvalue::Temp(x) => write!(f, "t{}", x.0),
         }
     }
@@ -192,20 +192,11 @@ impl Display for Lvalue {
 impl Display for Rvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Rvalue::Variable(x) => write!(f, "{}", x.name),
+            Rvalue::Variable(x) => write!(f, "{}({:x})", x.name, x.id),
             Rvalue::Temp(x) => write!(f, "t{}", x.0),
             Rvalue::IntegerLit(x) => write!(f, "{}", x),
             Rvalue::BinaryExpr(op, lhs, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
-            Rvalue::Call(call) => write!(
-                f,
-                "{}({})",
-                call.name,
-                call.args
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+            Rvalue::Call(call) => write!(f, "{}", call),
         }
     }
 }

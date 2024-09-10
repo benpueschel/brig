@@ -2,8 +2,8 @@ use brig_ast::FunctionDeclaration;
 use brig_diagnostic::Result;
 
 use crate::{
-    BasicBlock, BasicBlockData, Scope, ScopeData, Terminator, TerminatorKind, IR_END_BLOCK,
-    IR_START_BLOCK,
+    BasicBlock, BasicBlockData, Scope, ScopeData, Terminator, TerminatorKind, Var, VarDecl,
+    IR_END_BLOCK, IR_START_BLOCK, VAR_UNINITIALIZED,
 };
 
 pub mod block;
@@ -42,7 +42,21 @@ impl IrBuilder {
             span: data.span,
         });
 
-        let (first_node, last_node) = ir.traverse_block(data.body, None)?;
+        for param in &data.parameters {
+            let data = ir.scope_data_mut(scope);
+            let decl = VarDecl {
+                var: Var {
+                    name: param.ident.name.clone(),
+                    id: VAR_UNINITIALIZED,
+                    ty: param.ty.clone(),
+                    span: param.span,
+                },
+                scope,
+            };
+            data.var_decls.push(decl);
+        }
+
+        let (first_node, last_node) = ir.traverse_block(data.body, Some(scope))?;
 
         ir.basic_block_data_mut(IR_START_BLOCK).terminator = Some(Terminator {
             kind: TerminatorKind::Goto { target: first_node },

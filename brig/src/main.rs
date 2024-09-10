@@ -32,9 +32,10 @@ fn main() {
         // TODO: other kinds of declarations
         #[allow(irrefutable_let_patterns)]
         if let DeclarationKind::Function(func) = &decl.kind {
-            let ir = IrBuilder::build(func.clone())
+            let mut ir = IrBuilder::build(func.clone())
                 .map_err(|err| report_error(err, input))
                 .unwrap();
+            brig_ir::resolve::resolve_symbols_mut(&mut ir);
             println!("\n\n{}\n\n", func.name.name);
             println!("{}", ir);
         }

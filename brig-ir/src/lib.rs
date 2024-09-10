@@ -43,6 +43,7 @@ use brig_common::Span;
 
 pub mod build;
 pub mod debug;
+pub mod resolve;
 
 pub const IR_START_BLOCK: BasicBlock = BasicBlock(0);
 pub const IR_END_BLOCK: BasicBlock = BasicBlock(1);
