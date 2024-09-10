@@ -1,8 +1,8 @@
-use brig_ast::{AstNode, BinaryExpression, BinaryOperator, Expression, Ty, TyKind};
+use brig_ast::{AstNode, BinaryExpression, BinaryOperator, CallExpression, Expression, Ty, TyKind};
 use brig_diagnostic::{Error, Result};
 
 use crate::{
-    Lvalue, Operand, Rvalue, Scope, Statement, StatementKind, TempDecl, TempVal, Var,
+    FunctionCall, Lvalue, Operand, Rvalue, Scope, Statement, StatementKind, TempDecl, TempVal, Var,
     VAR_UNINITIALIZED,
 };
 
@@ -13,7 +13,10 @@ impl crate::Ir {
         scope: Scope,
     ) -> Result<Vec<Statement>> {
         match expr {
-            brig_ast::Expression::Call(_call) => todo!("Call expression"),
+            brig_ast::Expression::Call(call) => {
+                let (_op, stmts) = self.traverse_call_expression(call, scope)?;
+                Ok(stmts)
+            }
             brig_ast::Expression::Literal(lit) => Err(Error::other(
                 format!("literal '{:?}' is not a statement", lit.value),
                 lit.span,
@@ -43,7 +46,7 @@ impl crate::Ir {
         scope: Scope,
     ) -> Result<(Operand, Vec<Statement>)> {
         match expr {
-            brig_ast::Expression::Call(_) => todo!("call expression"),
+            brig_ast::Expression::Call(call) => self.traverse_call_expression(call, scope),
             brig_ast::Expression::Literal(_) => todo!("literal expression"),
             brig_ast::Expression::Binary(expr) => self.traverse_binary_expr(expr, scope),
             brig_ast::Expression::Identifier(ident) => Ok((
@@ -149,8 +152,41 @@ impl crate::Ir {
                 })),
                 vec![],
             )),
-            Expression::Call(_) => todo!("call expression"),
+            Expression::Call(call) => self.traverse_call_expression(call, scope),
         }
+    }
+
+    pub(crate) fn traverse_call_expression(
+        &mut self,
+        call: CallExpression,
+        scope: Scope,
+    ) -> Result<(Operand, Vec<Statement>)> {
+        let fn_ty = match call.fn_ty {
+            Some(ty) => ty,
+            None => return Err(Error::other("function type not found", call.span)),
+        };
+
+        let mut stmts = vec![];
+        let mut args = vec![];
+        for arg in call.args {
+            let (arg, arg_stmts) = self.traverse_rvalue(arg, scope)?;
+            stmts.extend(arg_stmts);
+            args.push(arg);
+        }
+
+        let func = FunctionCall {
+            name: call.callee.name,
+            ty: fn_ty,
+            args,
+            span: call.span,
+        };
+        let temp = Lvalue::Temp(self.alloc_temp(scope));
+        stmts.push(Statement {
+            span: call.span,
+            kind: StatementKind::Assign(temp.clone(), Operand::FunctionCall(func)),
+        });
+        // TODO: figure out what to do with the return value
+        Ok((Operand::Consume(temp), stmts))
     }
 
     fn alloc_temp(&mut self, scope: Scope) -> TempVal {

@@ -141,6 +141,14 @@ pub enum StatementKind {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct FunctionCall {
+    pub name: String,
+    pub ty: brig_ast::FnTy,
+    pub args: Vec<Operand>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Lvalue {
     Variable(Var),
     Temp(TempVal),
@@ -152,6 +160,7 @@ pub enum Rvalue {
     Variable(Var),
     Temp(TempVal),
     BinaryExpr(ExprOperator, Operand, Operand),
+    Call(FunctionCall),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -185,6 +194,7 @@ impl From<BinaryOperator> for ExprOperator {
 pub enum Operand {
     Consume(Lvalue),
     IntegerLit(usize),
+    FunctionCall(FunctionCall),
     Unit,
 }
 
@@ -193,6 +203,7 @@ impl From<Operand> for Rvalue {
         match operand {
             Operand::Consume(lvalue) => lvalue.into(),
             Operand::IntegerLit(value) => Rvalue::IntegerLit(value),
+            Operand::FunctionCall(call) => Rvalue::Call(call),
             Operand::Unit => panic!("unit operand is not a valid rvalue"),
         }
     }

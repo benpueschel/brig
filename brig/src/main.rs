@@ -29,8 +29,12 @@ fn main() {
         .unwrap();
 
     for decl in &program.declarations {
+        // TODO: other kinds of declarations
+        #[allow(irrefutable_let_patterns)]
         if let DeclarationKind::Function(func) = &decl.kind {
-            let ir = IrBuilder::build(func.clone()).expect("Failed to build IR");
+            let ir = IrBuilder::build(func.clone())
+                .map_err(|err| report_error(err, input))
+                .unwrap();
             println!("\n\n{}\n\n", func.name.name);
             println!("{}", ir);
         }

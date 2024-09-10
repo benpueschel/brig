@@ -2,6 +2,8 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::fmt::Write;
 
+use crate::FunctionCall;
+
 use super::ExprOperator;
 use super::Lvalue;
 use super::Operand;
@@ -194,7 +196,32 @@ impl Display for Rvalue {
             Rvalue::Temp(x) => write!(f, "t{}", x.0),
             Rvalue::IntegerLit(x) => write!(f, "{}", x),
             Rvalue::BinaryExpr(op, lhs, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
+            Rvalue::Call(call) => write!(
+                f,
+                "{}({})",
+                call.name,
+                call.args
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
         }
+    }
+}
+
+impl Display for FunctionCall {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}({})",
+            self.name,
+            self.args
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 
@@ -204,6 +231,7 @@ impl Display for Operand {
             Operand::Consume(x) => write!(f, "{}", x),
             Operand::IntegerLit(x) => write!(f, "{}", x),
             Operand::Unit => write!(f, "()"),
+            Operand::FunctionCall(call) => write!(f, "{}", call),
         }
     }
 }
