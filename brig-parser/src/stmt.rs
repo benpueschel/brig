@@ -4,9 +4,9 @@ impl Parser {
     pub fn parse_statement(&mut self) -> Result<Statement> {
         let token = self.peek()?;
         match token.kind {
-            // TODO: return statement
             // TODO: if statement
             TokenKind::Let => self.parse_variable_declaration(),
+            TokenKind::Return => self.parse_return_statement(),
             _ => self.parse_expression_statement(),
         }
     }
@@ -44,6 +44,32 @@ impl Parser {
             expr: Some(expr),
             span,
         }))
+    }
+
+    pub fn parse_return_statement(&mut self) -> Result<Statement> {
+        // return [expr];
+        let token = self.eat()?;
+        let start = token.span;
+
+        verify_token!(token, TokenKind::Return);
+
+        if let TokenKind::Semicolon = self.peek()?.kind {
+            let span = Span::compose(start, self.peek()?.span);
+            return Ok(Statement::Return(ReturnStatement {
+                expr: Expression::Literal(Literal {
+                    value: LiteralValue::Unit,
+                    ty: LiteralType::Unit,
+                    span,
+                }),
+                span,
+            }));
+        }
+
+        let expr = self.parse_expression()?;
+        verify_token!(self.eat()?, TokenKind::Semicolon);
+
+        let span = Span::compose(start, expr.span());
+        Ok(Statement::Return(ReturnStatement { expr, span }))
     }
 }
 
@@ -101,6 +127,25 @@ mod test {
                     span: Span::new(10, 11),
                 })),
                 span: Span::new(0, 11),
+            })
+        );
+    }
+
+    #[test]
+    pub fn parse_return_statement() {
+        let input = "return 5;";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let statement = parser.parse_statement().expect("Failed to parse statement");
+        assert_eq!(
+            statement,
+            Statement::Return(ReturnStatement {
+                expr: Expression::Literal(Literal {
+                    value: LiteralValue::Int(IntLit { value: 5 }),
+                    ty: LiteralType::Unresolved,
+                    span: Span::new(7, 8),
+                }),
+                span: Span::new(0, 8),
             })
         );
     }

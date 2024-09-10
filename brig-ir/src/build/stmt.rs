@@ -1,5 +1,5 @@
 use brig_ast::VariableDeclaration;
-use brig_diagnostic::Result;
+use brig_diagnostic::{Error, Result};
 
 use crate::{Lvalue, Scope, Statement, StatementKind, Var, VAR_UNINITIALIZED};
 
@@ -12,6 +12,9 @@ impl crate::Ir {
         match statement {
             brig_ast::Statement::VariableDeclaration(decl) => self.traverse_let_decl(decl, scope),
             brig_ast::Statement::Expression(expr) => self.traverse_expr_stmt(expr, scope),
+            brig_ast::Statement::Return(ret) => {
+                Err(Error::other("return statement is a branch", ret.span))
+            }
         }
     }
 

@@ -23,7 +23,7 @@ impl crate::Ir {
 
         for stmt in block.statements {
             if self.is_branching(&stmt) {
-                let branch = self.traverse_branch(&stmt, scope);
+                let branch = self.traverse_branch(&stmt, scope)?;
                 statements.extend(branch.condition_stmts);
 
                 let block = self.alloc_basic_block(BasicBlockData {

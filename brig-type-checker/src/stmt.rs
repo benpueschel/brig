@@ -9,6 +9,9 @@ impl TypeChecker {
             // Statement::Expression => map the returned Ty to ()
             Statement::Expression(ref mut e) => self.check_expression(e, None).map(|_| ()),
             Statement::VariableDeclaration(ref mut decl) => self.check_variable_declaration(decl),
+            Statement::Return(ref mut ret) => {
+                self.check_expression(&mut ret.expr, None).map(|_| ())
+            }
         }
     }
     pub fn check_variable_declaration(&mut self, decl: &mut VariableDeclaration) -> Result<()> {

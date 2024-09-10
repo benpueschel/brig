@@ -49,11 +49,19 @@ impl TypeChecker {
                     _ => false,
                 }
             }
+            LiteralValue::Unit => matches!(ty, LiteralType::Unit),
         }
     }
 
     fn lit_default(&self, lit: &mut Literal) -> Result<Ty> {
         match &lit.value {
+            LiteralValue::Unit => {
+                lit.ty = LiteralType::Unit;
+                Ok(Ty {
+                    kind: TyKind::Literal(LiteralType::Unit),
+                    span: lit.span,
+                })
+            }
             LiteralValue::Int(int) => {
                 // TODO: check if int is negative, which would make it a signed int
 

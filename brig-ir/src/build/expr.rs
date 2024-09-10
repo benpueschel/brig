@@ -138,6 +138,7 @@ impl crate::Ir {
             Expression::Binary(expr) => self.traverse_binary_expr(expr, scope),
             Expression::Literal(lit) => match lit.value {
                 brig_ast::LiteralValue::Int(val) => Ok((Operand::IntegerLit(val.value), vec![])),
+                brig_ast::LiteralValue::Unit => Ok((Operand::Unit, vec![])),
             },
             Expression::Identifier(ident) => Ok((
                 Operand::Consume(Lvalue::Variable(Var {

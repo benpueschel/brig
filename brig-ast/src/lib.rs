@@ -110,6 +110,7 @@ impl AstNode for Block {
 pub enum Statement {
     Expression(Expression),
     VariableDeclaration(VariableDeclaration),
+    Return(ReturnStatement),
 }
 
 impl AstNode for Statement {
@@ -117,7 +118,22 @@ impl AstNode for Statement {
         match self {
             Statement::Expression(e) => e.span(),
             Statement::VariableDeclaration(v) => v.span(),
+            Statement::Return(e) => e.span(),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReturnStatement {
+    /// The expression to return.
+    pub expr: Expression,
+    /// The span of the return statement.
+    pub span: Span,
+}
+
+impl AstNode for ReturnStatement {
+    fn span(&self) -> Span {
+        self.span
     }
 }
 
@@ -211,6 +227,7 @@ impl AstNode for Literal {
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
     Int(IntLit),
+    Unit,
 }
 
 #[derive(Debug, Clone, PartialEq)]

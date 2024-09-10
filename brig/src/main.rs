@@ -9,6 +9,7 @@ fn main() {
     let input = r#"
 fn foo(x: usize): usize {
     x = x - 5;
+    return x;
 }
 
 fn main() {
