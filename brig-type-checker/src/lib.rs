@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use brig_ast::{Program, Ty, TyKind};
+use brig_ast::{Program, Ty};
 use brig_diagnostic::Result;
 
 mod block;

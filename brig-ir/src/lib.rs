@@ -6,7 +6,7 @@
 //!
 //! Suppose we have the following program:
 //! ```orca
-//! fn main() -> usize {
+//! fn main(): usize {
 //!     let x: usize = 1;
 //!     let y: usize = 2;
 //!     let z: usize = x + y;
@@ -16,7 +16,7 @@
 //! ```
 //! The resulting IR would be generated on a very desugared version of the program:
 //! ```orca
-//! fn main() -> usize {
+//! fn main(): usize {
 //!     let x: usize;
 //!     x = 1;
 //!     let y: usize;
@@ -38,9 +38,11 @@
 
 use std::ops::{Index, IndexMut};
 
+use brig_ast::BinaryOperator;
 use brig_common::Span;
 
 pub mod build;
+pub mod debug;
 
 pub const IR_START_BLOCK: BasicBlock = BasicBlock(0);
 pub const IR_END_BLOCK: BasicBlock = BasicBlock(1);
@@ -165,6 +167,20 @@ pub enum ExprOperator {
     Lte,
 }
 
+impl From<BinaryOperator> for ExprOperator {
+    fn from(value: BinaryOperator) -> Self {
+        match value {
+            BinaryOperator::Add => ExprOperator::Add,
+            BinaryOperator::Subtract => ExprOperator::Sub,
+            BinaryOperator::Multiply => ExprOperator::Mul,
+            BinaryOperator::Divide => ExprOperator::Div,
+            BinaryOperator::Assign => panic!("assign operator is not a valid expression operator"),
+            BinaryOperator::LessThan => ExprOperator::Lt,
+            BinaryOperator::GreaterThan => ExprOperator::Gt,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Operand {
     Consume(Lvalue),
@@ -210,7 +226,7 @@ pub struct Var {
     // TODO: hide behind a debug flag - we exclusively use the id from this point on
     pub name: String,
     pub id: usize,
-    pub ty: brig_ty::Ty,
+    pub ty: brig_ast::Ty,
     pub span: Span,
 }
 

@@ -59,7 +59,6 @@ dependencies = [
  "brig-ast",
  "brig-common",
  "brig-diagnostic",
- "brig-ty",
 ]
 
 [[package]]
