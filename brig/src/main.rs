@@ -1,5 +1,6 @@
 use ariadne::Source;
 use brig_ast::DeclarationKind;
+use brig_codegen::CodeGenerator;
 use brig_ir::build::IrBuilder;
 use brig_lexer::Lexer;
 use brig_parser::Parser;
@@ -12,9 +13,10 @@ fn foo(x: usize): usize {
     return x;
 }
 
-fn main() {
+fn main(): usize {
     let x: usize = 10;
     x = 15 + foo(x - 5);
+    return x;
 }
 "#;
 
@@ -37,8 +39,16 @@ fn main() {
                 .map_err(|err| report_error(err, input))
                 .unwrap();
             brig_ir::resolve::resolve_symbols_mut(&mut ir);
-            println!("\n\n{}\n\n", func.name.name);
-            println!("{}", ir);
+
+            // TODO: ask user for target
+            let mut codegen = brig_codegen::x86_linux::X86Linux::new();
+            codegen
+                .process_graph(ir)
+                .map_err(|err| report_error(err, input))
+                .unwrap();
+
+            let asm = brig_codegen::x86_linux::codegen::generate_code(&codegen.nodes);
+            println!("{}", asm);
         }
     }
 

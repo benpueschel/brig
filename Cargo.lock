@@ -25,6 +25,7 @@ version = "0.0.1"
 dependencies = [
  "ariadne",
  "brig-ast",
+ "brig-codegen",
  "brig-common",
  "brig-diagnostic",
  "brig-ir",
@@ -38,6 +39,15 @@ name = "brig-ast"
 version = "0.0.1"
 dependencies = [
  "brig-common",
+]
+
+[[package]]
+name = "brig-codegen"
+version = "0.0.1"
+dependencies = [
+ "brig-common",
+ "brig-diagnostic",
+ "brig-ir",
 ]
 
 [[package]]

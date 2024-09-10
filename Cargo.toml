@@ -10,7 +10,7 @@ members = [
 	"brig",
 	"brig-ir",
 	"brig-type-checker",
-	"brig-ty",
+	"brig-ty", "brig-codegen",
 ]
 
 [workspace.package]

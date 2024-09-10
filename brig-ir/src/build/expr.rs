@@ -186,7 +186,6 @@ impl crate::Ir {
             span: call.span,
             kind: StatementKind::Assign(temp.clone(), Operand::FunctionCall(func)),
         });
-        // TODO: figure out what to do with the return value
         Ok((Operand::Consume(temp), stmts))
     }
 

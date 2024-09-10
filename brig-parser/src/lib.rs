@@ -83,13 +83,12 @@ impl Parser {
 
         verify_token!(self.eat()?, TokenKind::BraceClose);
 
-        Ok(Block {
-            span: Span::compose(
-                statements.first().map(|s| s.span()).unwrap_or_default(),
-                statements.last().map(|s| s.span()).unwrap_or_default(),
-            ),
-            statements,
-        })
+        let span = Span::compose(
+            statements.first().map(|s| s.span()).unwrap_or_default(),
+            statements.last().map(|s| s.span()).unwrap_or_default(),
+        );
+
+        Ok(Block { span, statements })
     }
 
     /// Parse an optional [`::brig_ast::Ty`] from the lexer. Types are always preceded by a colon.

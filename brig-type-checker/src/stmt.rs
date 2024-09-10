@@ -1,17 +1,17 @@
-use brig_ast::{Statement, VariableDeclaration};
+use brig_ast::{Statement, Ty, VariableDeclaration};
 use brig_diagnostic::{Error, Result};
 
 use crate::TypeChecker;
 
 impl TypeChecker {
-    pub fn check_statement(&mut self, stmt: &mut Statement) -> Result<()> {
+    /// NOTE: the `ty` parameter is only used for return statements. That's terrible.
+    /// But it works right now. I gotta refactor all this anyway.
+    pub fn check_statement(&mut self, stmt: &mut Statement, ty: Option<&Ty>) -> Result<()> {
         match stmt {
             // Statement::Expression => map the returned Ty to ()
             Statement::Expression(ref mut e) => self.check_expression(e, None).map(|_| ()),
             Statement::VariableDeclaration(ref mut decl) => self.check_variable_declaration(decl),
-            Statement::Return(ref mut ret) => {
-                self.check_expression(&mut ret.expr, None).map(|_| ())
-            }
+            Statement::Return(ref mut ret) => self.check_expression(&mut ret.expr, ty).map(|_| ()),
         }
     }
     pub fn check_variable_declaration(&mut self, decl: &mut VariableDeclaration) -> Result<()> {
@@ -34,6 +34,33 @@ mod test {
     use crate::*;
     use brig_ast::*;
     use brig_common::Span;
+
+    #[test]
+    fn check_return_statement() {
+        // return 42;
+        let mut stmt = Statement::Return(ReturnStatement {
+            expr: Expression::Literal(Literal {
+                value: LiteralValue::Int(IntLit { value: 42 }),
+                ty: LiteralType::Unresolved,
+                span: Span::new(7, 9),
+            }),
+            span: Span::new(0, 10),
+        });
+        let mut tc = TypeChecker::default();
+        tc.check_statement(&mut stmt, None).expect("type check failed");
+
+        assert_eq!(
+            stmt,
+            Statement::Return(ReturnStatement {
+                expr: Expression::Literal(Literal {
+                    value: LiteralValue::Int(IntLit { value: 42 }),
+                    ty: LiteralType::Uint(UintType::U32),
+                    span: Span::new(7, 9),
+                }),
+                span: Span::new(0, 10),
+            })
+        );
+    }
 
     #[test]
     fn check_variable_declaration() {

@@ -3,7 +3,7 @@ use brig_diagnostic::Result;
 
 use crate::{
     BasicBlock, BasicBlockData, Scope, ScopeData, Terminator, TerminatorKind, Var, VarDecl,
-    IR_END_BLOCK, IR_FN_SCOPE, IR_GLOBAL_SCOPE, IR_START_BLOCK, VAR_UNINITIALIZED,
+    IR_END_BLOCK, IR_GLOBAL_SCOPE, IR_START_BLOCK,
 };
 
 pub mod block;

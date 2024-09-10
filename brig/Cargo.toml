@@ -11,4 +11,5 @@ brig-lexer = { path = "../brig-lexer" }
 brig-parser = { path = "../brig-parser" }
 brig-type-checker = { path = "../brig-type-checker" }
 brig-ir = { path = "../brig-ir" }
+brig-codegen = { path = "../brig-codegen" }
 ariadne = { version = "0.4.1", features = ["auto-color"] }

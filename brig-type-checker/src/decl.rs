@@ -32,7 +32,7 @@ impl TypeChecker {
 
         // TODO: check parameters, check return type and maybe check if the return type matches the
         // last expression in the block.
-        self.check_block(&mut decl.body)?;
+        self.check_block(&mut decl.body, Some(&decl.return_ty))?;
 
         self.pop_scope();
         Ok(())

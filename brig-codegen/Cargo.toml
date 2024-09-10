@@ -1,0 +1,9 @@
+[package]
+name = "brig-codegen"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+brig-common = { path = "../brig-common" }
+brig-diagnostic = { path = "../brig-diagnostic" }
+brig-ir = { path = "../brig-ir" }
