@@ -3,7 +3,7 @@ use brig_diagnostic::Result;
 
 use crate::{
     BasicBlock, BasicBlockData, Scope, ScopeData, Terminator, TerminatorKind, Var, VarDecl,
-    IR_END_BLOCK, IR_START_BLOCK, VAR_UNINITIALIZED,
+    IR_END_BLOCK, IR_FN_SCOPE, IR_GLOBAL_SCOPE, IR_START_BLOCK, VAR_UNINITIALIZED,
 };
 
 pub mod block;
@@ -29,39 +29,47 @@ impl IrBuilder {
             basic_blocks: vec![],
             scopes: vec![],
             fn_name: data.name.name,
+            fn_params: vec![],
             span: data.span,
         };
 
         assert_eq!(ir.alloc_empty_basic_block(Scope(0)), IR_START_BLOCK);
         assert_eq!(ir.alloc_empty_basic_block(Scope(0)), IR_END_BLOCK);
 
-        let scope = ir.alloc_scope(ScopeData {
+        let global_scope = ir.alloc_scope(ScopeData {
             temp_decls: vec![],
             var_decls: vec![],
             parent: None,
             span: data.span,
         });
+        assert_eq!(global_scope, IR_GLOBAL_SCOPE);
+        let fn_scope = ir.alloc_scope(ScopeData {
+            temp_decls: vec![],
+            var_decls: vec![],
+            parent: Some(global_scope),
+            span: data.span,
+        });
 
-        for param in &data.parameters {
-            let data = ir.scope_data_mut(scope);
-            let decl = VarDecl {
+        for (i, param) in data.parameters.iter().enumerate() {
+            let var_id = crate::resolve::make_var_id(fn_scope, i);
+            ir.scope_data_mut(fn_scope).var_decls.push(VarDecl {
+                scope: fn_scope,
                 var: Var {
                     name: param.ident.name.clone(),
-                    id: VAR_UNINITIALIZED,
                     ty: param.ty.clone(),
                     span: param.span,
+                    id: var_id as usize, // FIXME: ugly, u64 rules
                 },
-                scope,
-            };
-            data.var_decls.push(decl);
+            });
+            ir.fn_params.push(var_id);
         }
 
-        let (first_node, last_node) = ir.traverse_block(data.body, Some(scope))?;
+        let (first_node, last_node) = ir.traverse_block(data.body, Some(fn_scope))?;
 
         ir.basic_block_data_mut(IR_START_BLOCK).terminator = Some(Terminator {
             kind: TerminatorKind::Goto { target: first_node },
             span: data.span,
-            scope,
+            scope: fn_scope,
         });
 
         ir.basic_block_data_mut(last_node).terminator = Some(Terminator {
@@ -69,7 +77,7 @@ impl IrBuilder {
                 target: IR_END_BLOCK,
             },
             span: data.span,
-            scope,
+            scope: fn_scope,
         });
         Ok(ir)
     }

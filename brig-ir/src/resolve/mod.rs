@@ -84,7 +84,11 @@ fn resolve_symbols_in_operand(ir: &mut Ir, operand: &mut Operand, scope: Scope) 
     }
 }
 
-fn resolve_symbol(ir: &mut Ir, var: &mut Var, scope_index: Scope) {
+pub(crate) fn make_var_id(scope_index: Scope, var_index: usize) -> u64 {
+    (scope_index.0 as u64) << 32 | var_index as u64
+}
+
+pub(crate) fn resolve_symbol(ir: &mut Ir, var: &mut Var, scope_index: Scope) {
     let scope = ir.scope_data_mut(scope_index);
     for i in 0..scope.var_decls.len() {
         let var_decl = &mut scope.var_decls[i].var;
@@ -92,7 +96,8 @@ fn resolve_symbol(ir: &mut Ir, var: &mut Var, scope_index: Scope) {
         // the ID is a 64-bit integer with the high 32 bits being the scope index
         // and the low 32 bits being the index of the symbol in the scope
         if var_decl.name == var.name {
-            let id = scope_index.0 << 32 | i;
+            // TODO: change this to u64 to be platform-independent
+            let id = make_var_id(scope_index, i) as usize;
             var_decl.id = id;
             var.id = id;
 

@@ -48,10 +48,14 @@ pub mod resolve;
 pub const IR_START_BLOCK: BasicBlock = BasicBlock(0);
 pub const IR_END_BLOCK: BasicBlock = BasicBlock(1);
 
+pub const IR_GLOBAL_SCOPE: Scope = Scope(0);
+pub const IR_FN_SCOPE: Scope = Scope(1);
+
 pub struct Ir {
     pub basic_blocks: Vec<BasicBlockData>,
     pub scopes: Vec<ScopeData>,
     pub fn_name: String,
+    pub fn_params: Vec<u64>,
     pub span: Span,
 }
 
