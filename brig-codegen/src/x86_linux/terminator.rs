@@ -27,7 +27,7 @@ impl X86Linux {
         self.nodes.push(AssemblyNode {
             instruction: Instruction::Jmp(JumpCondition::None),
             size: 0,
-            left: Expression::Label(self.finished_label.clone()),
+            left: self.finished_label.clone(),
             right: Expression::None,
         });
     }

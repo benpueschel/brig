@@ -42,7 +42,7 @@ pub struct X86Linux {
     registers: ScratchRegisters,
     register_graph: RegisterGraph,
     pub nodes: Vec<AssemblyNode>,
-    finished_label: String,
+    finished_label: Expression,
 
     label_counter: usize,
 }
@@ -52,13 +52,18 @@ impl CodeGenerator for X86Linux {
         X86Linux {
             registers: ScratchRegisters::new(),
             nodes: vec![],
-            finished_label: ".L0".into(),
-            label_counter: 1, // .L0 is reserved for the end of the program
+            finished_label: Expression::None,
+            label_counter: 0,
             register_graph: RegisterGraph::new(),
             fn_params: vec![],
         }
     }
     fn process_graph(&mut self, mut graph: Ir) -> Result<()> {
+        let label_counter = self.label_counter;
+        *self = Self::new();
+        self.label_counter = label_counter;
+        self.finished_label = self.label_alloc();
+
         self.register_graph.build_graph(&graph);
         self.fn_params = graph.fn_params.clone();
 
@@ -82,7 +87,7 @@ impl CodeGenerator for X86Linux {
         self.nodes.push(AssemblyNode {
             instruction: Instruction::LabelDeclaration,
             size: 0,
-            left: Expression::Label(self.finished_label.clone()),
+            left: self.finished_label.clone(),
             right: Expression::None,
         });
 

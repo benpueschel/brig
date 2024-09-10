@@ -31,6 +31,9 @@ fn main(): usize {
         .map_err(|err| report_error(err, input))
         .unwrap();
 
+    // TODO: ask user for target
+    let mut codegen = brig_codegen::x86_linux::X86Linux::new();
+
     for decl in &program.declarations {
         // TODO: other kinds of declarations
         #[allow(irrefutable_let_patterns)]
@@ -40,8 +43,6 @@ fn main(): usize {
                 .unwrap();
             brig_ir::resolve::resolve_symbols_mut(&mut ir);
 
-            // TODO: ask user for target
-            let mut codegen = brig_codegen::x86_linux::X86Linux::new();
             codegen
                 .process_graph(ir)
                 .map_err(|err| report_error(err, input))
