@@ -11,6 +11,9 @@ pub fn resolve_symbols(mut ir: Ir) -> Ir {
 }
 
 pub fn resolve_symbols_mut(ir: &mut Ir) {
+    if ir.basic_blocks.is_empty() {
+        return;
+    }
     resolve_symbols_in_block(ir, IR_START_BLOCK);
 }
 fn resolve_symbols_in_block(ir: &mut Ir, block: BasicBlock) {

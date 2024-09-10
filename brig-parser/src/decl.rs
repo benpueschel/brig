@@ -5,10 +5,10 @@ impl Parser {
         let modifiers = self.parse_declaration_modifiers()?;
         let token = self.peek()?;
         let kind = match token.kind {
-            TokenKind::Fn => DeclarationKind::Function(self.parse_function_declaration()?),
+            TokenKind::Fn => DeclarationKind::Function(self.parse_function_declaration(modifiers)?),
             x => return Err(Error::expected_token(x, vec!["fn".to_string()], token.span)),
         };
-        Ok(Declaration { kind, modifiers })
+        Ok(Declaration { kind })
     }
 
     pub fn parse_declaration_modifiers(&mut self) -> Result<Vec<DeclarationModifier>> {
@@ -26,9 +26,16 @@ impl Parser {
         Ok(modifiers)
     }
 
-    pub fn parse_function_declaration(&mut self) -> Result<FunctionDeclaration> {
-        // fn [name] ( <params> ): <return_type> { <body> }
-        let start = self.peek()?.span;
+    pub fn parse_function_declaration(
+        &mut self,
+        modifiers: Vec<DeclarationModifier>,
+    ) -> Result<FunctionDeclaration> {
+        // <modifiers> fn [name] ( <params> ): <return_type> { <body> }
+        let start = modifiers
+            .first()
+            .map(|m| Ok(m.span))
+            .unwrap_or_else(|| Ok(self.peek()?.span))?;
+
         verify_token!(self.eat()?, TokenKind::Fn);
 
         // Parse function name
@@ -59,10 +66,22 @@ impl Parser {
         let return_ty = self.parse_type()?;
 
         // Parse function body
-        let body = self.parse_block()?;
-        let span = Span::compose(start, body.span);
+        let body;
+        let span;
+        match self.peek()?.kind {
+            TokenKind::Semicolon => {
+                span = Span::compose(start, self.eat()?.span);
+                body = None;
+            }
+            _ => {
+                let block = self.parse_block()?;
+                span = Span::compose(start, block.span);
+                body = Some(block);
+            }
+        };
         Ok(FunctionDeclaration {
             name,
+            modifiers,
             parameters,
             return_ty,
             body,
@@ -76,6 +95,50 @@ mod test {
     use crate::*;
 
     #[test]
+    pub fn parse_extern_function() {
+        let input = "extern fn test(a: usize): u32;";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let declaration = parser
+            .parse_declaration()
+            .expect("Failed to parse declaration");
+
+        assert_eq!(declaration.span(), Span::new(0, 30));
+        assert_eq!(
+            declaration,
+            Declaration {
+                kind: DeclarationKind::Function(FunctionDeclaration {
+                    name: Identifier {
+                        name: "test".to_string(),
+                        span: Span::new(10, 14),
+                    },
+                    parameters: vec![Parameter {
+                        ident: Identifier {
+                            name: "a".to_string(),
+                            span: Span::new(15, 16),
+                        },
+                        ty: Ty {
+                            kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
+                            span: Span::new(18, 23),
+                        },
+                        span: Span::new(15, 23),
+                    }],
+                    return_ty: Ty {
+                        kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                        span: Span::new(26, 29),
+                    },
+                    body: None,
+                    span: Span::new(0, 30),
+                    modifiers: vec![DeclarationModifier {
+                        kind: DeclarationModifierKind::Extern,
+                        span: Span::new(0, 6),
+                    }],
+                }),
+            }
+        );
+    }
+
+    #[test]
     pub fn parse_function() {
         let input = "fn test() {
         let x = 5;
@@ -83,13 +146,14 @@ mod test {
         let lexer = Lexer::new(input.to_string());
         let mut parser = Parser::new(lexer);
         let function = parser
-            .parse_function_declaration()
+            .parse_function_declaration(vec![])
             .expect("Failed to parse function");
 
         assert_eq!(function.span(), Span::new(0, 29));
         assert_eq!(
             function,
             FunctionDeclaration {
+                modifiers: vec![],
                 name: Identifier {
                     name: "test".to_string(),
                     span: Span::new(3, 7),
@@ -99,7 +163,7 @@ mod test {
                     kind: TyKind::Unspecified,
                     span: Span::new(10, 10),
                 },
-                body: Block {
+                body: Some(Block {
                     statements: vec![Statement::VariableDeclaration(VariableDeclaration {
                         name: Identifier {
                             name: "x".to_string(),
@@ -117,7 +181,7 @@ mod test {
                         span: Span::new(20, 29),
                     })],
                     span: Span::new(20, 29),
-                },
+                }),
                 span: Span::new(0, 29),
             }
         );

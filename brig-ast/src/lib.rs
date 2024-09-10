@@ -25,8 +25,6 @@ impl AstNode for Program {
 pub struct Declaration {
     /// The kind of declaration.
     pub kind: DeclarationKind,
-    /// The modifiers of the declaration (e.g. `extern`).
-    pub modifiers: Vec<DeclarationModifier>,
 }
 
 impl AstNode for Declaration {
@@ -54,12 +52,15 @@ impl AstNode for DeclarationKind {
 pub struct FunctionDeclaration {
     /// The name of the function.
     pub name: Identifier,
+    /// The modifiers of the declaration (e.g. `extern`).
+    pub modifiers: Vec<DeclarationModifier>,
     /// The parameters of the function.
     pub parameters: Vec<Parameter>,
     /// The return type of the function.
     pub return_ty: Ty,
     /// The body of the function.
-    pub body: Block,
+    /// If this is `None`, the function is extern.
+    pub body: Option<Block>,
     /// The span of the function declaration.
     pub span: Span,
 }

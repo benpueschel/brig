@@ -41,7 +41,7 @@ impl X86Linux {
         let then_label = self.label_alloc();
         let done_label = self.label_alloc();
         match condition {
-            Rvalue::Call(call) => todo!("process call in if condition"),
+            Rvalue::Call(_call) => todo!("process call in if condition"),
             Rvalue::Temp(temp) => {
                 let operand = self.process_operand(&Operand::Consume(Lvalue::Temp(*temp)));
                 self.nodes.push(AssemblyNode {

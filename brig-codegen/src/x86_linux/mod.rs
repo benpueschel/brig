@@ -62,17 +62,28 @@ impl CodeGenerator for X86Linux {
         let label_counter = self.label_counter;
         *self = Self::new();
         self.label_counter = label_counter;
+
+        if graph.is_extern {
+            self.nodes.push(AssemblyNode {
+                instruction: Instruction::AssemblyDirective,
+                size: 0,
+                left: Expression::Label(format!(".globl {}", graph.fn_name)),
+                right: Expression::None,
+            });
+        }
+
+        // if the graph has no basic blocks, it's an external function declaration
+        // (e.g. `extern fn foo(): u32;`), so we don't need to generate any code, just
+        // declare the function globally
+        if graph.basic_blocks.is_empty() {
+            return Ok(());
+        }
+
         self.finished_label = self.label_alloc();
 
         self.register_graph.build_graph(&graph);
         self.fn_params = graph.fn_params.clone();
 
-        self.nodes.push(AssemblyNode {
-            instruction: Instruction::AssemblyDirective,
-            size: 0,
-            left: Expression::Label(format!(".globl {}", graph.fn_name)),
-            right: Expression::None,
-        });
         self.nodes.push(AssemblyNode {
             instruction: Instruction::LabelDeclaration,
             size: 0,

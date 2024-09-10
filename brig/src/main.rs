@@ -8,15 +8,10 @@ use brig_type_checker::TypeChecker;
 
 fn main() {
     let input = r#"
-fn foo(x: usize): usize {
-    x = x - 5;
-    return x;
-}
+extern fn bar(x: usize): usize;
 
-fn main(): usize {
-    let x: usize = 10;
-    x = 15 + foo(x - 5);
-    return x;
+extern fn foo(x: usize): usize {
+    return bar(0);
 }
 "#;
 

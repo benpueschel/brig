@@ -1,4 +1,4 @@
-use brig_ast::FunctionDeclaration;
+use brig_ast::{DeclarationModifierKind, FunctionDeclaration};
 use brig_diagnostic::Result;
 
 use crate::{
@@ -29,9 +29,18 @@ impl IrBuilder {
             basic_blocks: vec![],
             scopes: vec![],
             fn_name: data.name.name,
+            is_extern: data
+                .modifiers
+                .iter()
+                .any(|m| matches!(m.kind, DeclarationModifierKind::Extern)),
             fn_params: vec![],
             span: data.span,
         };
+
+        if data.body.is_none() {
+            return Ok(ir);
+        }
+        let body = data.body.unwrap();
 
         assert_eq!(ir.alloc_empty_basic_block(Scope(0)), IR_START_BLOCK);
         assert_eq!(ir.alloc_empty_basic_block(Scope(0)), IR_END_BLOCK);
@@ -64,7 +73,7 @@ impl IrBuilder {
             ir.fn_params.push(var_id);
         }
 
-        let (first_node, last_node) = ir.traverse_block(data.body, Some(fn_scope))?;
+        let (first_node, last_node) = ir.traverse_block(body, Some(fn_scope))?;
 
         ir.basic_block_data_mut(IR_START_BLOCK).terminator = Some(Terminator {
             kind: TerminatorKind::Goto { target: first_node },

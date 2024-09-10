@@ -55,6 +55,7 @@ pub struct Ir {
     pub basic_blocks: Vec<BasicBlockData>,
     pub scopes: Vec<ScopeData>,
     pub fn_name: String,
+    pub is_extern: bool,
     pub fn_params: Vec<u64>,
     pub span: Span,
 }
