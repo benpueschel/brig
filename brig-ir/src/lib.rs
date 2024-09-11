@@ -266,15 +266,20 @@ impl Ir {
     pub fn scope_data_mut(&mut self, scope: Scope) -> &mut ScopeData {
         &mut self.scopes[scope.index()]
     }
-    pub fn find_declaration(&mut self, var: &Var) -> &mut VarDecl {
+    pub fn find_declaration_mut(&mut self, id: u64) -> &mut VarDecl {
         // let id = scope_index.0 << 32 | i;
-        let scope_index = var.id >> 32;
-        let var_index = var.id & 0xFFFF_FFFF;
+        let scope_index = id >> 32;
+        let var_index = id & 0xFFFF_FFFF;
 
-        println!("id: {:x}", var.id);
-        println!("scope_index: {:x}, var_index: {:x}", scope_index, var_index);
+        let scope = &mut self.scopes[scope_index as usize];
+        &mut scope.var_decls[var_index as usize]
+    }
+    pub fn find_declaration(&self, id: u64) -> &VarDecl {
+        // let id = scope_index.0 << 32 | i;
+        let scope_index = id >> 32;
+        let var_index = id & 0xFFFF_FFFF;
 
-        let scope = &mut self.scopes[scope_index];
-        &mut scope.var_decls[var_index]
+        let scope = &self.scopes[scope_index as usize];
+        &scope.var_decls[var_index as usize]
     }
 }

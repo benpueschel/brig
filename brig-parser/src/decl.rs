@@ -57,6 +57,10 @@ impl Parser {
 
             let span = Span::compose(ident.span, ty.span);
             parameters.push(Parameter { ident, ty, span });
+
+            if self.peek()?.kind == TokenKind::Comma {
+                self.eat()?;
+            }
         }
 
         // Verify that the next token is a ParenClose

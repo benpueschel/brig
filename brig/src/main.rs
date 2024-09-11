@@ -10,9 +10,16 @@ fn main() {
     let input = r#"
 extern fn bar(x: usize): usize;
 
-extern fn foo(x: usize): usize {
-    return bar(0);
+extern fn ayo(a: usize, b: usize, c: usize, d: usize, e: usize, f: usize, g: usize, h: usize): usize {
+    return a + b + c + d + e + f + g + h;
 }
+
+extern fn foo(x: usize): usize {
+    return bar(x - 5);
+}
+"#;
+
+    let _ = r#"
 "#;
 
     let lexer = Lexer::new(input.to_string());

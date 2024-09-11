@@ -1,3 +1,26 @@
+//! Let me interject for a moment.
+//!
+//! What you guys are referring to as Linux, is in fact, GNU/Linux, or as I've recently taken to
+//! calling it, GNU plus Linux. Linux is not an operating system unto itself, but rather another
+//! free component of a fully functioning GNU system made useful by the GNU corelibs, shell
+//! utilities and vital system components comprising a full OS as defined by POSIX.
+//! Many computer users run a modified version of the GNU system every day, without realizing it.
+//! Through a peculiar turn of events, the version of GNU which is widely used today is often
+//! called "Linux", and many of its users are not aware that it is basically the GNU system,
+//! developed by the GNU Project.
+//! There really is a Linux, and these people are using it, but it is just a part of the system
+//! they use.
+//! Linux is the kernel: the program in the system that allocates the machine's resources to the
+//! other programs that you run. The kernel is an essential part of an operating system,
+//! but useless by itself; it can only function in the context of a complete operating system.
+//!
+//! Linux is normally used in combination with the GNU operating system:
+//! the whole system is basically GNU with Linux added, or GNU/Linux.
+//! All the so-called "Linux" distributions are really distributions of GNU/Linux.
+//! Thank you for taking your time to cooperate with with me, your friendly GNU+Linux neighbor,
+//!
+//! Richard Stallman.
+//!
 use assembly_node::{AssemblyNode, Expression, Instruction, JumpCondition};
 use brig_diagnostic::Result;
 use brig_ir::{
@@ -93,6 +116,19 @@ impl CodeGenerator for X86Linux {
 
         self.setup_stack_frame();
 
+        for (i, param) in graph.fn_params.iter().enumerate() {
+            let var = graph.find_declaration(*param).var.clone();
+            let expr = self.process_variable(var);
+            if i < FN_CALL_REGISTERS.len() {
+                self.nodes.push(AssemblyNode {
+                    instruction: Instruction::Mov,
+                    size: 8, // TODO: dynamic size
+                    left: Expression::Register(FN_CALL_REGISTERS[i]),
+                    right: expr,
+                });
+            }
+        }
+
         self.process_basic_block(&mut graph, IR_START_BLOCK);
 
         self.nodes.push(AssemblyNode {
@@ -165,15 +201,6 @@ impl X86Linux {
     }
 
     fn process_variable(&mut self, var: Var) -> Expression {
-        for (i, param) in self.fn_params.iter().enumerate() {
-            if *param == var.id as u64 {
-                if i < FN_CALL_REGISTERS.len() {
-                    return Expression::Register(FN_CALL_REGISTERS[i]);
-                } else {
-                    todo!("bleed into stack");
-                }
-            }
-        }
         self.process_register_node(var.into())
     }
 
@@ -204,21 +231,26 @@ impl X86Linux {
             Operand::FunctionCall(call) => {
                 // process a function call based on the system v abi
 
-                for (i, arg) in call.args.iter().enumerate() {
+                let mut stack_offset = 0;
+                for (i, arg) in call.args.iter().enumerate().rev() {
                     let expr = self.process_operand(arg);
 
-                    let dest = if i < FN_CALL_REGISTERS.len() {
-                        Expression::Register(FN_CALL_REGISTERS[i])
+                    if i < FN_CALL_REGISTERS.len() {
+                        self.nodes.push(AssemblyNode {
+                            instruction: Instruction::Mov,
+                            size: 8, // TODO: dynamic size
+                            left: expr,
+                            right: Expression::Register(FN_CALL_REGISTERS[i]),
+                        });
                     } else {
-                        todo!("bleed into stack")
-                    };
-
-                    self.nodes.push(AssemblyNode {
-                        instruction: Instruction::Mov,
-                        size: 8, // TODO: dynamic size
-                        left: expr,
-                        right: dest,
-                    });
+                        self.nodes.push(AssemblyNode {
+                            instruction: Instruction::Push,
+                            size: 8, // TODO: dynamic size
+                            left: expr,
+                            right: Expression::None,
+                        });
+                        stack_offset += 8;
+                    }
                 }
 
                 self.nodes.push(AssemblyNode {
@@ -227,6 +259,15 @@ impl X86Linux {
                     left: Expression::Label(call.name.clone()),
                     right: Expression::None,
                 });
+
+                if stack_offset > 0 {
+                    self.nodes.push(AssemblyNode {
+                        instruction: Instruction::Add,
+                        size: 8,
+                        left: Expression::IntegerLiteral(stack_offset),
+                        right: Expression::Register(scratch::RSP),
+                    });
+                }
 
                 // TODO: get return type and size, check how that changes the abi
                 Expression::Register(scratch::RAX)

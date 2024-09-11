@@ -5,6 +5,8 @@ use brig_ir::{
     IR_START_BLOCK,
 };
 
+use super::FN_CALL_REGISTERS;
+
 pub const REGISTER_SIZE: Register = 7;
 pub const ALL_REGISTERS_ALLOCATED: Register = 2 * (1 << (REGISTER_SIZE - 1)) - 1;
 
@@ -15,9 +17,9 @@ pub const RDX: Register = 1 << (REGISTER_SIZE + 2);
 pub const RDI: Register = 1 << (REGISTER_SIZE + 3);
 pub const RSI: Register = 1 << (REGISTER_SIZE + 4);
 pub const R8: Register = 1 << (REGISTER_SIZE + 5);
-pub const R9: Register = 1 << (REGISTER_SIZE + 5);
-pub const RBP: Register = 1 << (REGISTER_SIZE + 6);
-pub const RSP: Register = 1 << (REGISTER_SIZE + 7);
+pub const R9: Register = 1 << (REGISTER_SIZE + 6);
+pub const RBP: Register = 1 << (REGISTER_SIZE + 7);
+pub const RSP: Register = 1 << (REGISTER_SIZE + 8);
 
 pub type Register = usize;
 
@@ -78,6 +80,24 @@ impl RegisterGraph {
         RegisterGraph::default()
     }
     pub fn build_graph(&mut self, ir: &Ir) {
+        let mut stack_offset = 16; // When a function gets called, the return address is pushed to
+                                   // the stack, so we start at 16. (first variable is from 9 to 16)
+        for (i, param) in ir.fn_params.iter().enumerate() {
+            let var = ir.find_declaration(*param).var.clone();
+            if i < FN_CALL_REGISTERS.len() {
+                self.process_lvalue(&Lvalue::Variable(var));
+            } else {
+                self.nodes.insert(
+                    var.into(),
+                    RegisterNodeData {
+                        edges: Vec::new(),
+                        location: ScratchLocation::Stack(stack_offset),
+                    },
+                );
+                stack_offset += 8; // NOTE: I think that parameters pushed to the stack are always 8
+                                   // bytes long. Idk tho
+            }
+        }
         self.traverse_graph(ir, IR_START_BLOCK);
     }
 
@@ -239,6 +259,8 @@ impl ScratchRegisters {
                 RDX => "%rdx",
                 RDI => "%rdi",
                 RSI => "%rsi",
+                R8 => "%r8",
+                R9 => "%r9",
                 RBP => "%rbp",
                 RSP => "%rsp",
                 x => panic!("{} is not a valid register", x),
@@ -256,6 +278,8 @@ impl ScratchRegisters {
                 RDX => "%edx",
                 RDI => "%edi",
                 RSI => "%esi",
+                R8 => "%r8d",
+                R9 => "%r9d",
                 RBP => "%ebp",
                 RSP => "%esp",
                 x => panic!("{} is not a valid register", x),
@@ -273,6 +297,8 @@ impl ScratchRegisters {
                 RDX => "%dx",
                 RDI => "%di",
                 RSI => "%si",
+                R8 => "%r8w",
+                R9 => "%r9w",
                 RBP => "%bp",
                 RSP => "%sp",
                 x => panic!("{} is not a valid register", x),
@@ -290,6 +316,8 @@ impl ScratchRegisters {
                 RDX => "%dl",
                 RDI => "%dil",
                 RSI => "%sil",
+                R8 => "%r8l",
+                R9 => "%r9l",
                 RBP => "%bpl",
                 RSP => "%spl",
                 x => panic!("{} is not a valid register", x),
