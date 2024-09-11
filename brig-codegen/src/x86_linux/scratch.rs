@@ -202,7 +202,7 @@ impl RegisterGraph {
                 .allocate()
                 .map(ScratchLocation::Register)
                 .unwrap_or_else(|| {
-                    self.stack_offset -= 8; // TODO: size
+                    self.stack_offset -= node.size as i64;
                     ScratchLocation::Stack(self.stack_offset)
                 });
             RegisterNodeData {

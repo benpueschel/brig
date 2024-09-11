@@ -55,7 +55,7 @@ pub struct FunctionDeclaration {
     /// The modifiers of the declaration (e.g. `extern`).
     pub modifiers: Vec<DeclarationModifier>,
     /// The parameters of the function.
-    pub parameters: Vec<Parameter>,
+    pub parameters: Punctuated<Parameter>,
     /// The return type of the function.
     pub return_ty: Ty,
     /// The body of the function.
@@ -63,6 +63,51 @@ pub struct FunctionDeclaration {
     pub body: Option<Block>,
     /// The span of the function declaration.
     pub span: Span,
+}
+
+/// A list of punctuated elements.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Punctuated<T> {
+    /// The elements of the punctuated list.
+    pub elements: Vec<T>,
+    /// The span of the punctuated list.
+    pub span: Span,
+}
+
+impl<T> Punctuated<T> {
+    pub fn new(elements: Vec<T>, span: Span) -> Self {
+        Self { elements, span }
+    }
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.elements.iter()
+    }
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.elements.iter_mut()
+    }
+    pub fn len(&self) -> usize {
+        self.elements.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.elements.is_empty()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Punctuated<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.iter()
+    }
+}
+
+impl<T> IntoIterator for Punctuated<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter()
+    }
 }
 
 impl AstNode for FunctionDeclaration {
@@ -178,7 +223,7 @@ impl AstNode for Expression {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CallExpression {
     pub callee: Identifier,
-    pub args: Vec<Expression>,
+    pub args: Punctuated<Expression>,
     pub fn_ty: Option<FnTy>,
     pub span: Span,
 }

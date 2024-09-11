@@ -91,6 +91,52 @@ impl Parser {
         Ok(Block { span, statements })
     }
 
+    /// Parse a punctuation-separated list of elements enclosed by parenthesis, where each element
+    /// is parsed by the given function `f`.
+    ///
+    /// The function `f` should return the parsed element, or an error if the element could not be
+    /// parsed.
+    /// The function `f` should consume any tokens it needs to parse the element, but not consume
+    /// any punctuation tokens, or the closing parenthesis.
+    pub fn parse_punctuated_list<T, F>(&mut self, punct: TokenKind, f: F) -> Result<Punctuated<T>>
+    where
+        F: Fn(&mut Parser) -> Result<T>,
+    {
+        verify_token!(self.eat()?, TokenKind::ParenOpen);
+
+        let mut elements = Vec::new();
+        let mut span = self.peek()?.span;
+
+        if self.peek()?.kind == TokenKind::ParenClose {
+            self.eat()?;
+            return Ok(Punctuated { elements, span });
+        }
+
+        loop {
+            span = Span::compose(span, self.peek()?.span);
+            elements.push(f(self)?);
+            let token = self.peek()?;
+
+            if token.kind == TokenKind::ParenClose {
+                break;
+            }
+            if token.kind != punct {
+                return Err(Error::expected_token(
+                    token.kind.to_str(),
+                    vec![
+                        punct.to_str().to_string(),
+                        TokenKind::ParenClose.to_str().to_string(),
+                    ],
+                    token.span,
+                ));
+            }
+            self.eat()?;
+        }
+
+        verify_token!(self.eat()?, TokenKind::ParenClose);
+        Ok(Punctuated { elements, span })
+    }
+
     /// Parse an optional [`::brig_ast::Ty`] from the lexer. Types are always preceded by a colon.
     /// If no colon is found, the returned Type is `Ty::Unspecified`.
     pub fn parse_type(&mut self) -> Result<Ty> {

@@ -60,7 +60,7 @@ impl Parser {
         // For now, we'll just parse a single identifier as the callee.
 
         let token = self.peek()?;
-        let mut span = token.span;
+        let span = token.span;
 
         let callee = ident_from_token(token);
         if callee.is_err() {
@@ -75,27 +75,10 @@ impl Parser {
             // This isn't a call expression, so just return the callee as an identifier.
             return Ok(Expression::Identifier(callee));
         }
-        let _ = self.eat()?; // eat the paren open
-
-        // TODO: move all this into a separate function - parse_punctuated_list
-        let mut args = Vec::new();
-        loop {
-            let token = self.peek()?;
-            span = Span::compose(span, token.span);
-            if token.kind == TokenKind::ParenClose {
-                let _ = self.eat()?;
-                break;
-            }
-            let expr = self.parse_expression()?;
-            args.push(expr);
-            let token = self.peek()?;
-            if token.kind == TokenKind::Comma {
-                let _ = self.eat()?;
-            }
-        }
+        let args = self.parse_punctuated_list(TokenKind::Comma, Parser::parse_expression)?;
+        let span = Span::compose(span, args.span);
 
         let fn_ty = None;
-
         Ok(Expression::Call(CallExpression {
             callee,
             args,

@@ -41,30 +41,18 @@ impl Parser {
         // Parse function name
         let name = ident_from_token(self.eat()?)?;
 
-        // Verify that the next token is a ParenOpen
-        verify_token!(self.eat()?, TokenKind::ParenOpen);
-
-        // Parse parameters
-        let mut parameters: Vec<Parameter> = Vec::new();
-        while self.peek()?.kind != TokenKind::ParenClose {
-            let ident = ident_from_token(self.eat()?)?;
+        let parameters = self.parse_punctuated_list(TokenKind::Comma, |parser: &mut Self| {
+            let ident = ident_from_token(parser.eat()?)?;
 
             // function parameters must always have a type
-            let ty = self.parse_type()?;
+            let ty = parser.parse_type()?;
             if ty.kind == TyKind::Unspecified {
                 return Err(Error::expected_type(ident.span));
             }
 
             let span = Span::compose(ident.span, ty.span);
-            parameters.push(Parameter { ident, ty, span });
-
-            if self.peek()?.kind == TokenKind::Comma {
-                self.eat()?;
-            }
-        }
-
-        // Verify that the next token is a ParenClose
-        verify_token!(self.eat()?, TokenKind::ParenClose);
+            Ok(Parameter { ident, ty, span })
+        })?;
 
         // Parse return type
         let return_ty = self.parse_type()?;
@@ -100,14 +88,14 @@ mod test {
 
     #[test]
     pub fn parse_extern_function() {
-        let input = "extern fn test(a: usize): u32;";
+        let input = "extern fn test(a: usize, b: u32): u32;";
         let lexer = Lexer::new(input.to_string());
         let mut parser = Parser::new(lexer);
         let declaration = parser
             .parse_declaration()
             .expect("Failed to parse declaration");
 
-        assert_eq!(declaration.span(), Span::new(0, 30));
+        assert_eq!(declaration.span(), Span::new(0, 38));
         assert_eq!(
             declaration,
             Declaration {
@@ -116,25 +104,42 @@ mod test {
                         name: "test".to_string(),
                         span: Span::new(10, 14),
                     },
-                    parameters: vec![Parameter {
-                        ident: Identifier {
-                            name: "a".to_string(),
-                            span: Span::new(15, 16),
-                        },
-                        ty: Ty {
-                            kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
-                            span: Span::new(18, 23),
-                            size: 8,
-                        },
-                        span: Span::new(15, 23),
-                    }],
+                    parameters: Punctuated {
+                        elements: vec![
+                            Parameter {
+                                ident: Identifier {
+                                    name: "a".to_string(),
+                                    span: Span::new(15, 16),
+                                },
+                                ty: Ty {
+                                    kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
+                                    span: Span::new(18, 23),
+                                    size: 8,
+                                },
+                                span: Span::new(15, 23),
+                            },
+                            Parameter {
+                                ident: Identifier {
+                                    name: "b".to_string(),
+                                    span: Span::new(25, 26),
+                                },
+                                ty: Ty {
+                                    kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                                    span: Span::new(28, 31),
+                                    size: 4,
+                                },
+                                span: Span::new(25, 31),
+                            }
+                        ],
+                        span: Span::new(15, 26),
+                    },
                     return_ty: Ty {
                         kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
-                        span: Span::new(26, 29),
+                        span: Span::new(34, 37),
                         size: 4,
                     },
                     body: None,
-                    span: Span::new(0, 30),
+                    span: Span::new(0, 38),
                     modifiers: vec![DeclarationModifier {
                         kind: DeclarationModifierKind::Extern,
                         span: Span::new(0, 6),
@@ -164,7 +169,10 @@ mod test {
                     name: "test".to_string(),
                     span: Span::new(3, 7),
                 },
-                parameters: vec![],
+                parameters: Punctuated {
+                    elements: vec![],
+                    span: Span::new(8, 9),
+                },
                 return_ty: Ty {
                     kind: TyKind::Unspecified,
                     span: Span::new(10, 10),
