@@ -20,6 +20,7 @@ impl TypeChecker {
         });
         let ty = Ty {
             kind,
+            size: 0,
             span: decl.span,
         };
         self.add_symbol(decl.name.name.clone(), ty);

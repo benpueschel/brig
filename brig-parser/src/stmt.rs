@@ -93,6 +93,7 @@ mod test {
                 ty: Ty {
                     kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
                     span: Span::new(9, 14),
+                    size: 8,
                 },
                 expr: Some(Expression::Literal(Literal {
                     value: LiteralValue::Int(IntLit { value: 5 }),
@@ -120,6 +121,7 @@ mod test {
                 ty: Ty {
                     kind: TyKind::Unspecified,
                     span: Span::new(8, 8),
+                    size: 0,
                 },
                 expr: Some(Expression::Literal(Literal {
                     value: LiteralValue::Int(IntLit { value: 5 }),

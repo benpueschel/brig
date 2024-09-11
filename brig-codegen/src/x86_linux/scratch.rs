@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use brig_ir::{
-    BasicBlock, Ir, Lvalue, Operand, Rvalue, StatementKind, TempVal, TerminatorKind, Var,
-    IR_START_BLOCK,
+    BasicBlock, Ir, Lvalue, Operand, OperandKind, Rvalue, StatementKind, TempVal, TerminatorKind,
+    Var, IR_START_BLOCK,
 };
 
 use super::FN_CALL_REGISTERS;
@@ -139,7 +139,7 @@ impl RegisterGraph {
                 if self.nodes.contains_key(&var.clone().into()) {
                     return;
                 }
-                self.stack_offset -= 8;
+                self.stack_offset -= var.size as i64;
                 self.nodes.insert(
                     var.clone().into(),
                     RegisterNodeData {
@@ -160,7 +160,7 @@ impl RegisterGraph {
                 if self.nodes.contains_key(&var.clone().into()) {
                     return;
                 }
-                self.stack_offset -= 8;
+                self.stack_offset -= var.size as i64;
                 self.nodes.insert(
                     var.clone().into(),
                     RegisterNodeData {
@@ -183,11 +183,11 @@ impl RegisterGraph {
     }
 
     fn process_operand(&mut self, operand: &Operand) {
-        match operand {
-            Operand::Consume(lvalue) => self.process_lvalue(lvalue),
-            Operand::Unit => {}
-            Operand::IntegerLit(_) => {}
-            Operand::FunctionCall(_) => {}
+        match &operand.kind {
+            OperandKind::Consume(lvalue) => self.process_lvalue(lvalue),
+            OperandKind::Unit => {}
+            OperandKind::IntegerLit(_) => {}
+            OperandKind::FunctionCall(_) => {}
         }
     }
 
@@ -198,7 +198,7 @@ impl RegisterGraph {
                 .allocate()
                 .map(ScratchLocation::Register)
                 .unwrap_or_else(|| {
-                    self.stack_offset -= 8;
+                    self.stack_offset -= 8; // TODO: size
                     ScratchLocation::Stack(self.stack_offset)
                 });
             RegisterNodeData {

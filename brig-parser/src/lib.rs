@@ -97,6 +97,7 @@ impl Parser {
         if !matches!(self.peek()?.kind, TokenKind::Colon) {
             return Ok(Ty {
                 kind: TyKind::Unspecified,
+                size: 0,
                 span: Span::with_len(self.peek()?.span.start, 0),
             });
         }
@@ -107,12 +108,12 @@ impl Parser {
             TokenKind::Identifier(_) => {
                 let ident = ident_from_token(self.eat()?)?;
                 let span = ident.span;
-                let kind = match ident.name.as_str() {
-                    "u32" => TyKind::Literal(LiteralType::Uint(UintType::U32)),
-                    "usize" => TyKind::Literal(LiteralType::Uint(UintType::Usize)),
-                    _ => TyKind::UserDefined(ident),
+                let (size, kind) = match ident.name.as_str() {
+                    "u32" => (4, TyKind::Literal(LiteralType::Uint(UintType::U32))),
+                    "usize" => (8, TyKind::Literal(LiteralType::Uint(UintType::Usize))),
+                    _ => (0, TyKind::UserDefined(ident)),
                 };
-                Ok(Ty { kind, span })
+                Ok(Ty { kind, span, size })
             }
             _ => Err(expected_ident(&token)),
         }
@@ -133,6 +134,7 @@ mod test {
             Ty {
                 kind: TyKind::Unspecified,
                 span: Span::new(0, 0),
+                size: 0,
             }
         );
     }
@@ -148,6 +150,7 @@ mod test {
             Ty {
                 kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
                 span: Span::new(2, 7),
+                size: 8,
             }
         );
     }
@@ -163,6 +166,7 @@ mod test {
             Ty {
                 kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
                 span: Span::new(2, 5),
+                size: 4,
             }
         );
     }
@@ -181,6 +185,7 @@ mod test {
                     span: Span::new(2, 8),
                 }),
                 span: Span::new(2, 8),
+                size: 0,
             }
         );
     }

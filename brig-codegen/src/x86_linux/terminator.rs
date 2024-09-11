@@ -1,4 +1,6 @@
-use brig_ir::{BasicBlock, ExprOperator, Ir, Lvalue, Operand, Rvalue, Terminator, TerminatorKind};
+use brig_ir::{
+    BasicBlock, ExprOperator, Ir, Lvalue, Operand, OperandKind, Rvalue, Terminator, TerminatorKind,
+};
 
 use super::{
     assembly_node::{AssemblyNode, Expression, Instruction, JumpCondition},
@@ -15,11 +17,11 @@ impl X86Linux {
     }
 
     fn process_return(&mut self, expr: &Operand) {
-        let operand = self.process_operand(expr);
+        let (size, operand) = self.process_operand(expr);
         if operand != Expression::None {
             self.nodes.push(AssemblyNode {
                 instruction: Instruction::Mov,
-                size: 8, // TODO: dynamic size
+                size,
                 left: operand,
                 right: Expression::Register(scratch::RAX),
             });
@@ -43,26 +45,31 @@ impl X86Linux {
         match condition {
             Rvalue::Call(_call) => todo!("process call in if condition"),
             Rvalue::Temp(temp) => {
-                let operand = self.process_operand(&Operand::Consume(Lvalue::Temp(*temp)));
+                let (size, operand) = self.process_operand(&Operand {
+                    kind: OperandKind::Consume(Lvalue::Temp(*temp)),
+                    size: temp.size(),
+                });
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Cmp,
-                    size: 8, // TODO: dynamic size
+                    size,
                     left: Expression::IntegerLiteral(0),
                     right: operand,
                 });
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Jmp(JumpCondition::Equal),
-                    size: 0,
+                    size: temp.size(),
                     left: then_label.clone(),
                     right: Expression::None,
                 });
             }
             Rvalue::Variable(var) => {
-                let operand =
-                    self.process_operand(&Operand::Consume(Lvalue::Variable(var.clone())));
+                let (size, operand) = self.process_operand(&Operand {
+                    kind: OperandKind::Consume(Lvalue::Variable(var.clone())),
+                    size: var.size,
+                });
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Cmp,
-                    size: 8, // TODO: dynamic size
+                    size,
                     left: Expression::IntegerLiteral(0),
                     right: operand,
                 });
@@ -74,10 +81,13 @@ impl X86Linux {
                 });
             }
             Rvalue::IntegerLit(lit) => {
-                let operand = self.process_operand(&Operand::IntegerLit(*lit));
+                let (size, operand) = self.process_operand(&Operand {
+                    kind: OperandKind::IntegerLit(*lit),
+                    size: 0,
+                });
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Cmp,
-                    size: 8, // TODO: dynamic size
+                    size,
                     left: Expression::IntegerLiteral(0),
                     right: operand,
                 });
@@ -90,13 +100,16 @@ impl X86Linux {
             }
             Rvalue::BinaryExpr(op, lhs, rhs) => {
                 if let Some(condition) = self.get_jump_condition(op) {
-                    let left = self.process_operand(rhs);
-                    let right = match self.process_operand(lhs) {
+                    let (size, left) = self.process_operand(rhs);
+                    let (rsize, right) = self.process_operand(lhs);
+                    let size = size.max(rsize);
+
+                    let right = match right {
                         Expression::Register(x) => Expression::Register(x),
                         x => {
                             self.nodes.push(AssemblyNode {
                                 instruction: Instruction::Mov,
-                                size: 8, // TODO: dynamic size
+                                size,
                                 left: x,
                                 right: Expression::Register(scratch::RAX),
                             });
@@ -105,7 +118,7 @@ impl X86Linux {
                     };
                     self.nodes.push(AssemblyNode {
                         instruction: Instruction::Cmp,
-                        size: 8, // TODO: dynamic size
+                        size,
                         left,
                         right,
                     });
@@ -116,10 +129,11 @@ impl X86Linux {
                         right: Expression::None,
                     });
                 } else {
-                    let expr = self.process_binary_expr(op.clone(), rhs.clone(), lhs.clone());
+                    let (size, expr) =
+                        self.process_binary_expr(op.clone(), rhs.clone(), lhs.clone());
                     self.nodes.push(AssemblyNode {
                         instruction: Instruction::Cmp,
-                        size: 8, // TODO: dynamic size
+                        size,
                         left: Expression::IntegerLiteral(0),
                         right: expr,
                     });

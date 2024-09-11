@@ -64,9 +64,8 @@ impl IrBuilder {
             ir.scope_data_mut(fn_scope).var_decls.push(VarDecl {
                 scope: fn_scope,
                 var: Var {
-                    name: param.ident.name.clone(),
-                    ty: param.ty.clone(),
-                    span: param.span,
+                    ident: param.ident.clone(),
+                    size: param.ty.size,
                     id: var_id as usize, // FIXME: ugly, u64 rules
                 },
             });

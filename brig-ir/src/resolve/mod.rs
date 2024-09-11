@@ -1,8 +1,10 @@
 //! This module is responsible for resoving types and symbols in the IR
 
+use brig_ast::Identifier;
+
 use crate::{
-    BasicBlock, Ir, Lvalue, Operand, Rvalue, Scope, Statement, StatementKind, TerminatorKind, Var,
-    IR_START_BLOCK,
+    BasicBlock, Ir, Lvalue, Operand, OperandKind, Rvalue, Scope, Statement, StatementKind,
+    TerminatorKind, Var, IR_START_BLOCK,
 };
 
 pub fn resolve_symbols(mut ir: Ir) -> Ir {
@@ -73,13 +75,13 @@ fn resolve_symbols_in_lvalue(ir: &mut Ir, lvalue: &mut Lvalue, scope: Scope) {
     }
 }
 fn resolve_symbols_in_operand(ir: &mut Ir, operand: &mut Operand, scope: Scope) {
-    match operand {
-        Operand::Consume(lvalue) => {
+    match &mut operand.kind {
+        OperandKind::Consume(lvalue) => {
             resolve_symbols_in_lvalue(ir, lvalue, scope);
         }
-        Operand::Unit => {}
-        Operand::IntegerLit(_) => {}
-        Operand::FunctionCall(call) => {
+        OperandKind::Unit => {}
+        OperandKind::IntegerLit(_) => {}
+        OperandKind::FunctionCall(call) => {
             for arg in &mut call.args {
                 resolve_symbols_in_operand(ir, arg, scope);
             }
@@ -91,39 +93,39 @@ pub(crate) fn make_var_id(scope_index: Scope, var_index: usize) -> u64 {
     (scope_index.0 as u64) << 32 | var_index as u64
 }
 
-pub(crate) fn resolve_symbol(ir: &mut Ir, var: &mut Var, scope_index: Scope) {
+pub(crate) fn resolve_var(ir: &mut Ir, ident: Identifier, scope_index: Scope) -> Option<Var> {
     let scope = ir.scope_data_mut(scope_index);
+    let mut var = Var {
+        id: 0,
+        size: 0,
+        ident: ident.clone(),
+    };
+
     for i in 0..scope.var_decls.len() {
         let var_decl = &mut scope.var_decls[i].var;
         // if we find the symbol in this scope, assign it an ID:
         // the ID is a 64-bit integer with the high 32 bits being the scope index
         // and the low 32 bits being the index of the symbol in the scope
-        if var_decl.name == var.name {
+        if var_decl.ident.name == ident.name {
             // TODO: change this to u64 to be platform-independent
             let id = make_var_id(scope_index, i) as usize;
             var_decl.id = id;
             var.id = id;
-
-            // resolve the type of the symbol
-            // we assume that the type checker already resolved the type of the symbol declaration,
-            // so we copy it to any references to the symbol
-            //
-            // TODO: use lifetimed references instead of copying the type
-            assert_ne!(
-                var_decl.ty.kind,
-                brig_ast::TyKind::Unspecified,
-                "Type of symbol declaration {}({:x}) not resolved",
-                var_decl.name,
-                var_decl.id
-            );
-            var.ty = var_decl.ty.clone();
-            return;
+            var.size = var_decl.size;
+            return Some(var);
         }
     }
     // if we didn't find the symbol in this scope, try the parent scope
     if let Some(parent) = scope.parent {
-        resolve_symbol(ir, var, parent);
+        return resolve_var(ir, ident, parent);
+    }
+    None
+}
+
+pub(crate) fn resolve_symbol(ir: &mut Ir, var: &mut Var, scope_index: Scope) {
+    if let Some(v) = resolve_var(ir, var.ident.clone(), scope_index) {
+        *var = v;
         return;
     }
-    panic!("Symbol not found: {} {}", var.name, var.span);
+    panic!("Symbol not found: {}", var.ident);
 }

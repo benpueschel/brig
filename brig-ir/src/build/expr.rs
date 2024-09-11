@@ -1,9 +1,9 @@
-use brig_ast::{AstNode, BinaryExpression, BinaryOperator, CallExpression, Expression, Ty, TyKind};
+use brig_ast::{AstNode, BinaryExpression, BinaryOperator, CallExpression, Expression};
 use brig_diagnostic::{Error, Result};
 
 use crate::{
-    FunctionCall, Lvalue, Operand, Rvalue, Scope, Statement, StatementKind, TempDecl, TempVal, Var,
-    VAR_UNINITIALIZED,
+    resolve, FunctionCall, Lvalue, Operand, OperandKind, Rvalue, Scope, Statement, StatementKind,
+    TempDecl, TempVal,
 };
 
 impl crate::Ir {
@@ -49,19 +49,18 @@ impl crate::Ir {
             brig_ast::Expression::Call(call) => self.traverse_call_expression(call, scope),
             brig_ast::Expression::Literal(_) => todo!("literal expression"),
             brig_ast::Expression::Binary(expr) => self.traverse_binary_expr(expr, scope),
-            brig_ast::Expression::Identifier(ident) => Ok((
-                Operand::Consume(Lvalue::Variable(Var {
-                    name: ident.name,
-                    id: VAR_UNINITIALIZED,
-                    // TODO: get the type from the symbol table (but that's in brig-type-checker)
-                    ty: Ty {
-                        kind: TyKind::Unspecified,
-                        span: ident.span,
+            brig_ast::Expression::Identifier(ident) => {
+                let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
+                    Error::other(format!("variable '{}' not found", ident.name), ident.span)
+                })?;
+                Ok((
+                    Operand {
+                        size: var.size,
+                        kind: OperandKind::Consume(Lvalue::Variable(var)),
                     },
-                    span: ident.span,
-                })),
-                vec![],
-            )),
+                    vec![],
+                ))
+            }
         }
     }
 
@@ -97,8 +96,10 @@ impl crate::Ir {
         }
         let (left, mut stmts) = self.traverse_rvalue(*expr.lhs, scope)?;
         let (right, right_stmts) = self.traverse_rvalue(*expr.rhs, scope)?;
+        let size = left.size.max(right.size);
+
         stmts.extend(right_stmts);
-        let temp = Lvalue::Temp(self.alloc_temp(scope));
+        let temp = Lvalue::Temp(self.alloc_temp(size, scope));
         stmts.push(Statement {
             span: expr.span,
             kind: StatementKind::Assign(temp.clone(), left),
@@ -107,21 +108,23 @@ impl crate::Ir {
             span: expr.span,
             kind: StatementKind::Modify(temp.clone(), expr.op.into(), right),
         });
-        Ok((Operand::Consume(temp), stmts))
+        Ok((
+            Operand {
+                size,
+                kind: OperandKind::Consume(temp),
+            },
+            stmts,
+        ))
     }
 
-    pub(crate) fn traverse_lvalue(&mut self, expr: Expression, _scope: Scope) -> Result<Lvalue> {
+    pub(crate) fn traverse_lvalue(&mut self, expr: Expression, scope: Scope) -> Result<Lvalue> {
         match expr {
-            brig_ast::Expression::Identifier(ident) => Ok(Lvalue::Variable(Var {
-                name: ident.name,
-                id: VAR_UNINITIALIZED,
-                // TODO: get the type from the symbol table (but that's in brig-type-checker)
-                ty: Ty {
-                    kind: TyKind::Unspecified,
-                    span: ident.span,
-                },
-                span: ident.span,
-            })),
+            brig_ast::Expression::Identifier(ident) => {
+                let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
+                    Error::other(format!("variable '{}' not found", ident.name), ident.span)
+                })?;
+                Ok(Lvalue::Variable(var))
+            }
             x => Err(Error::other(
                 format!("expression '{:?}' is not an lvalue", x),
                 x.span(),
@@ -137,22 +140,33 @@ impl crate::Ir {
         match expr {
             Expression::Binary(expr) => self.traverse_binary_expr(expr, scope),
             Expression::Literal(lit) => match lit.value {
-                brig_ast::LiteralValue::Int(val) => Ok((Operand::IntegerLit(val.value), vec![])),
-                brig_ast::LiteralValue::Unit => Ok((Operand::Unit, vec![])),
-            },
-            Expression::Identifier(ident) => Ok((
-                Operand::Consume(Lvalue::Variable(Var {
-                    name: ident.name,
-                    id: VAR_UNINITIALIZED,
-                    // TODO: get the type from the symbol table (but that's in brig-type-checker)
-                    ty: Ty {
-                        kind: TyKind::Unspecified,
-                        span: ident.span,
+                brig_ast::LiteralValue::Int(val) => Ok((
+                    Operand {
+                        size: 0,
+                        kind: OperandKind::IntegerLit(val.value),
                     },
-                    span: ident.span,
-                })),
-                vec![],
-            )),
+                    vec![],
+                )),
+                brig_ast::LiteralValue::Unit => Ok((
+                    Operand {
+                        size: 0,
+                        kind: OperandKind::Unit,
+                    },
+                    vec![],
+                )),
+            },
+            Expression::Identifier(ident) => {
+                let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
+                    Error::other(format!("variable '{}' not found", ident.name), ident.span)
+                })?;
+                Ok((
+                    Operand {
+                        size: var.size,
+                        kind: OperandKind::Consume(Lvalue::Variable(var)),
+                    },
+                    vec![],
+                ))
+            }
             Expression::Call(call) => self.traverse_call_expression(call, scope),
         }
     }
@@ -175,23 +189,39 @@ impl crate::Ir {
             args.push(arg);
         }
 
+        let temp = Lvalue::Temp(self.alloc_temp(fn_ty.ret.size, scope));
+        let size = fn_ty.ret.size;
         let func = FunctionCall {
             name: call.callee.name,
             ty: fn_ty,
             args,
             span: call.span,
         };
-        let temp = Lvalue::Temp(self.alloc_temp(scope));
         stmts.push(Statement {
             span: call.span,
-            kind: StatementKind::Assign(temp.clone(), Operand::FunctionCall(func)),
+            kind: StatementKind::Assign(
+                temp.clone(),
+                Operand {
+                    kind: OperandKind::FunctionCall(func),
+                    size,
+                },
+            ),
         });
-        Ok((Operand::Consume(temp), stmts))
+        Ok((
+            Operand {
+                kind: OperandKind::Consume(temp),
+                size,
+            },
+            stmts,
+        ))
     }
 
-    fn alloc_temp(&mut self, scope: Scope) -> TempVal {
+    fn alloc_temp(&mut self, size: usize, scope: Scope) -> TempVal {
         let data = self.scope_data_mut(scope);
         data.temp_decls.push(TempDecl { scope });
-        TempVal(data.temp_decls.len() - 1)
+        TempVal {
+            size,
+            index: data.temp_decls.len() - 1,
+        }
     }
 }

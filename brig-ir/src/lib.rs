@@ -38,7 +38,7 @@
 
 use std::ops::{Index, IndexMut};
 
-use brig_ast::BinaryOperator;
+use brig_ast::{BinaryOperator, Identifier};
 use brig_common::Span;
 
 pub mod build;
@@ -197,20 +197,26 @@ impl From<BinaryOperator> for ExprOperator {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Operand {
+pub struct Operand {
+    pub kind: OperandKind,
+    pub size: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum OperandKind {
     Consume(Lvalue),
     IntegerLit(usize),
     FunctionCall(FunctionCall),
     Unit,
 }
 
-impl From<Operand> for Rvalue {
-    fn from(operand: Operand) -> Rvalue {
+impl From<OperandKind> for Rvalue {
+    fn from(operand: OperandKind) -> Rvalue {
         match operand {
-            Operand::Consume(lvalue) => lvalue.into(),
-            Operand::IntegerLit(value) => Rvalue::IntegerLit(value),
-            Operand::FunctionCall(call) => Rvalue::Call(call),
-            Operand::Unit => panic!("unit operand is not a valid rvalue"),
+            OperandKind::Consume(lvalue) => lvalue.into(),
+            OperandKind::IntegerLit(value) => Rvalue::IntegerLit(value),
+            OperandKind::FunctionCall(call) => Rvalue::Call(call),
+            OperandKind::Unit => panic!("unit operand is not a valid rvalue"),
         }
     }
 }
@@ -225,10 +231,16 @@ impl From<Lvalue> for Rvalue {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TempVal(usize);
+pub struct TempVal {
+    index: usize,
+    size: usize,
+}
 impl TempVal {
     pub fn value(&self) -> usize {
-        self.0
+        self.index
+    }
+    pub fn size(&self) -> usize {
+        self.size
     }
 }
 
@@ -241,10 +253,9 @@ const VAR_UNINITIALIZED: usize = usize::MAX;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Var {
     // TODO: hide behind a debug flag - we exclusively use the id from this point on
-    pub name: String,
+    pub ident: Identifier,
     pub id: usize,
-    pub ty: brig_ast::Ty,
-    pub span: Span,
+    pub size: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]

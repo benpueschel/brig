@@ -3,6 +3,7 @@ use std::fmt::Display;
 use std::fmt::Write;
 
 use crate::FunctionCall;
+use crate::OperandKind;
 
 use super::ExprOperator;
 use super::Lvalue;
@@ -184,16 +185,16 @@ impl Display for Statement {
 impl Display for Lvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Lvalue::Variable(x) => write!(f, "{}({:x})", x.name, x.id),
-            Lvalue::Temp(x) => write!(f, "t{}", x.0),
+            Lvalue::Variable(x) => write!(f, "{}({:x})", x.ident.name, x.id),
+            Lvalue::Temp(x) => write!(f, "t{}({})", x.index, x.size),
         }
     }
 }
 impl Display for Rvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Rvalue::Variable(x) => write!(f, "{}({:x})", x.name, x.id),
-            Rvalue::Temp(x) => write!(f, "t{}", x.0),
+            Rvalue::Variable(x) => write!(f, "{}({:x})", x.ident.name, x.id),
+            Rvalue::Temp(x) => write!(f, "t{}({})", x.index, x.size),
             Rvalue::IntegerLit(x) => write!(f, "{}", x),
             Rvalue::BinaryExpr(op, lhs, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
             Rvalue::Call(call) => write!(f, "{}", call),
@@ -218,11 +219,17 @@ impl Display for FunctionCall {
 
 impl Display for Operand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.kind)
+    }
+}
+
+impl Display for OperandKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Operand::Consume(x) => write!(f, "{}", x),
-            Operand::IntegerLit(x) => write!(f, "{}", x),
-            Operand::Unit => write!(f, "()"),
-            Operand::FunctionCall(call) => write!(f, "{}", call),
+            OperandKind::Consume(x) => write!(f, "{}", x),
+            OperandKind::IntegerLit(x) => write!(f, "{}", x),
+            OperandKind::Unit => write!(f, "()"),
+            OperandKind::FunctionCall(call) => write!(f, "{}", call),
         }
     }
 }

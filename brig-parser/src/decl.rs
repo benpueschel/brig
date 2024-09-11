@@ -124,12 +124,14 @@ mod test {
                         ty: Ty {
                             kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
                             span: Span::new(18, 23),
+                            size: 8,
                         },
                         span: Span::new(15, 23),
                     }],
                     return_ty: Ty {
                         kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
                         span: Span::new(26, 29),
+                        size: 4,
                     },
                     body: None,
                     span: Span::new(0, 30),
@@ -166,6 +168,7 @@ mod test {
                 return_ty: Ty {
                     kind: TyKind::Unspecified,
                     span: Span::new(10, 10),
+                    size: 0,
                 },
                 body: Some(Block {
                     statements: vec![Statement::VariableDeclaration(VariableDeclaration {
@@ -175,6 +178,7 @@ mod test {
                         },
                         ty: Ty {
                             kind: TyKind::Unspecified,
+                            size: 0,
                             span: Span::new(26, 26),
                         },
                         expr: Some(Expression::Literal(Literal {

@@ -31,6 +31,7 @@ impl TypeChecker {
                 Ok(Ty {
                     kind: ident_ty.kind.clone(),
                     span: ident.span,
+                    size: ident_ty.size,
                 })
             }
         }
@@ -60,19 +61,22 @@ impl TypeChecker {
                 Ok(Ty {
                     kind: TyKind::Literal(LiteralType::Unit),
                     span: lit.span,
+                    size: 0,
                 })
             }
             LiteralValue::Int(int) => {
                 // TODO: check if int is negative, which would make it a signed int
 
-                let mut ty = LiteralType::Uint(UintType::U32);
+                let (mut size, mut ty) = (4, LiteralType::Uint(UintType::U32));
                 if int.value > u32::MAX as usize {
+                    size = size_of::<usize>();
                     ty = LiteralType::Uint(UintType::Usize);
                 }
                 lit.ty = ty;
                 Ok(Ty {
                     kind: TyKind::Literal(ty),
                     span: lit.span,
+                    size,
                 })
             }
         }
@@ -85,6 +89,7 @@ impl TypeChecker {
                     if self.lit_is_compatible_with(lit, lit_ty) {
                         let new_ty = Ty {
                             kind: ty.kind.clone(),
+                            size: ty.size,
                             span: lit.span,
                         };
                         lit.ty = *lit_ty;
@@ -169,6 +174,7 @@ impl TypeChecker {
         expr.ty_kind = Some(lhs.kind.clone());
         Ok(Ty {
             kind: lhs.kind,
+            size: lhs.size,
             span,
         })
     }
@@ -190,6 +196,7 @@ mod test {
             },
             ty: Ty {
                 kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
+                size: 8,
                 span: Span::new(7, 12),
             },
             expr: Some(Expression::Literal(Literal {
@@ -227,6 +234,7 @@ mod test {
             },
             ty: Ty {
                 kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                size: 4,
                 span: Span::new(7, 9),
             },
             expr: Some(Expression::Literal(Literal {

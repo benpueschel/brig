@@ -276,6 +276,7 @@ impl AstNode for Identifier {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ty {
     pub kind: TyKind,
+    pub size: usize,
     pub span: Span,
 }
 

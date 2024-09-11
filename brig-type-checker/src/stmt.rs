@@ -72,6 +72,7 @@ mod test {
             },
             ty: Ty {
                 kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                size: 4,
                 span: Span::new(7, 9),
             },
             expr: Some(Expression::Literal(Literal {

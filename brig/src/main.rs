@@ -61,7 +61,6 @@ fn main() {
                 .process_graph(ir)
                 .map_err(|err| report_error(err, &input))
                 .unwrap();
-
             let asm = brig_codegen::x86_linux::codegen::generate_code(&codegen.nodes);
             output.push_str(&asm);
             output.push('\n');

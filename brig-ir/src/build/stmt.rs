@@ -25,10 +25,9 @@ impl crate::Ir {
     ) -> Result<Vec<Statement>> {
         let scope_data = self.scope_data_mut(scope);
         let var = Var {
-            name: data.name.name.clone(),
+            ident: data.name.clone(),
             id: VAR_UNINITIALIZED,
-            ty: data.ty.clone(),
-            span: data.span,
+            size: data.ty.size,
         };
         scope_data.var_decls.push(crate::VarDecl {
             var: var.clone(),
