@@ -24,23 +24,24 @@ pub const RSP: Register = 1 << (REGISTER_SIZE + 8);
 pub type Register = usize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct RegisterNode(usize);
+pub struct RegisterNode {
+    pub value: usize,
+    pub size: usize,
+}
+
 impl RegisterNode {
-    pub fn value(&self) -> usize {
-        self.0
-    }
-    pub fn new(value: usize) -> Self {
-        RegisterNode(value)
+    pub fn new(value: usize, size: usize) -> Self {
+        RegisterNode { value, size }
     }
 }
 impl From<Var> for RegisterNode {
     fn from(var: Var) -> Self {
-        RegisterNode(var.id)
+        RegisterNode::new(var.id, var.size)
     }
 }
 impl From<TempVal> for RegisterNode {
     fn from(temp: TempVal) -> Self {
-        RegisterNode(temp.value())
+        RegisterNode::new(temp.value(), temp.size())
     }
 }
 
@@ -134,7 +135,7 @@ impl RegisterGraph {
     }
 
     fn process_lvalue(&mut self, lvalue: &Lvalue) {
-        let index = match lvalue {
+        match lvalue {
             Lvalue::Variable(var) => {
                 if self.nodes.contains_key(&var.clone().into()) {
                     return;
@@ -147,15 +148,15 @@ impl RegisterGraph {
                         location: ScratchLocation::Stack(self.stack_offset),
                     },
                 );
-                return;
             }
-            Lvalue::Temp(temp) => temp.value(),
+            Lvalue::Temp(temp) => {
+                let _node = self.get_node_or_insert((*temp).into());
+            }
         };
-        let _node = self.get_node_or_insert(RegisterNode(index));
     }
 
     fn process_rvalue(&mut self, rvalue: &Rvalue) {
-        let index = match rvalue {
+        match rvalue {
             Rvalue::Variable(var) => {
                 if self.nodes.contains_key(&var.clone().into()) {
                     return;
@@ -168,18 +169,21 @@ impl RegisterGraph {
                         location: ScratchLocation::Stack(self.stack_offset),
                     },
                 );
-                return;
             }
-            Rvalue::Temp(temp) => temp.value(),
             Rvalue::BinaryExpr(_, lhs, rhs) => {
                 self.process_operand(lhs);
                 self.process_operand(rhs);
-                return;
             }
-            Rvalue::IntegerLit(_) => return,
-            Rvalue::Call(call) => return,
+            Rvalue::IntegerLit(_) => {}
+            Rvalue::Call(call) => {
+                for arg in &call.args {
+                    self.process_operand(arg);
+                }
+            }
+            Rvalue::Temp(temp) => {
+                let _node = self.get_node_or_insert((*temp).into());
+            }
         };
-        let _node = self.get_node_or_insert(RegisterNode(index));
     }
 
     fn process_operand(&mut self, operand: &Operand) {
