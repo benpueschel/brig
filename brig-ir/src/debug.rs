@@ -1,183 +1,127 @@
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::fmt::Write;
+use std::{fmt::Display, process::Termination};
 
-use crate::FunctionCall;
-use crate::OperandKind;
-
-use super::ExprOperator;
-use super::Lvalue;
-use super::Operand;
-use super::Rvalue;
-use super::StatementKind;
-use super::{
-    BasicBlockData, Ir, Statement, Terminator, TerminatorKind, IR_END_BLOCK, IR_START_BLOCK,
+use crate::{
+    ExprOperator, Ir, Lvalue, Operand, OperandKind, Rvalue, Statement, Terminator, TerminatorKind,
+    IR_END_BLOCK, IR_START_BLOCK,
 };
 
 impl Display for Ir {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let start = self.basic_block_data(IR_START_BLOCK);
-        let debug = start.display_fmt(self, f.alternate())?;
-        write!(f, "{}", debug)
+        let params = self
+            .fn_params
+            .iter()
+            .map(|p| {
+                let var = &self.find_declaration(*p).var;
+                format!("{}: TODO TYPE", var.ident)
+            })
+            .collect::<Vec<_>>();
+
+        writeln!(f, "fn {}({}) {{", self.fn_name, params.join(", "))?;
+
+        self.scopes.iter().enumerate().try_for_each(|(i, s)| {
+            let indent = "    ".repeat(i);
+            if i != 0 {
+                writeln!(f, "{indent}scope {} {{", i)?;
+            }
+            s.var_decls
+                .iter()
+                .try_for_each(|d| writeln!(f, "{indent}    let {}: TODO TYPE", d.var.ident))?;
+
+            s.temp_decls
+                .iter()
+                .enumerate()
+                .try_for_each(|(i, _)| writeln!(f, "{indent}    let t{}: TODO TYPE", i))?;
+
+            Ok(())
+        })?;
+
+        self.scopes
+            .iter()
+            .enumerate()
+            .rev()
+            .try_for_each(|(i, _)| {
+                let indent = "    ".repeat(i);
+                if i != 0 {
+                    writeln!(f, "{indent}}}")?;
+                }
+                Ok(())
+            })?;
+
+        for (index, block) in self.basic_blocks.iter().enumerate() {
+            writeln!(f, "    bb{index}: {{")?;
+            for stmt in &block.statements {
+                writeln!(f, "        {};", stmt)?;
+            }
+
+            if index == IR_START_BLOCK.0 {
+                writeln!(f, "        START;")?;
+            } else if index == IR_END_BLOCK.0 {
+                writeln!(f, "        END;")?;
+            }
+
+            if let Some(terminator) = &block.terminator {
+                writeln!(f, "        {};", terminator)?;
+            }
+
+            writeln!(f, "    }}")?;
+        }
+
+        writeln!(f, "}}")
     }
 }
 
-impl Debug for Ir {
+impl Display for Terminator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let start = self.basic_block_data(IR_START_BLOCK);
-        let debug = start.debug_fmt(self, f.alternate())?;
-        f.debug_tuple("Ir").field(&debug).finish()
+        write!(f, "{}", self.kind)
     }
 }
 
-impl BasicBlockData {
-    pub fn display_fmt(&self, ir: &Ir, pretty: bool) -> Result<DebugString, std::fmt::Error> {
-        let mut fmt = DebugString::default();
-        if ir.basic_blocks[IR_END_BLOCK] == *self {
-            write!(fmt, "end")?;
-            return Ok(fmt);
-        }
-
-        for statement in &self.statements {
-            writeln!(fmt, "{}", statement)?;
-        }
-        if let Some(terminator) = &self.terminator {
-            writeln!(fmt, "{}", terminator.display_fmt(ir, pretty)?)?;
-        }
-        Ok(fmt)
-    }
-
-    pub fn debug_fmt(&self, ir: &Ir, pretty: bool) -> Result<DebugString, std::fmt::Error> {
-        let mut fmt = DebugString::default();
-
-        if ir.basic_blocks[IR_END_BLOCK] == *self {
-            write!(fmt, "end")?;
-            return Ok(fmt);
-        }
-
-        #[derive(Debug)]
-        #[allow(dead_code)]
-        struct Bb {
-            stmts: Vec<Statement>,
-            term: Option<DebugString>,
-        }
-        let bb = Bb {
-            stmts: self.statements.clone(),
-            term: match &self.terminator {
-                Some(x) => Some(x.debug_fmt(ir, pretty)?),
-                None => None,
-            },
-        };
-        if pretty {
-            write!(fmt, "{:#?}", bb)?;
-        } else {
-            write!(fmt, "{:?}", bb)?;
-        }
-        Ok(fmt)
-    }
-}
-
-impl Terminator {
-    pub fn debug_fmt(&self, ir: &Ir, pretty: bool) -> Result<DebugString, std::fmt::Error> {
-        let mut fmt = DebugString::default();
-        let kind = self.kind.debug_fmt(ir, pretty)?;
-        if pretty {
-            write!(fmt, "{:#?}", kind)?;
-        } else {
-            write!(fmt, "{:?}", kind)?;
-        }
-        Ok(fmt)
-    }
-    pub fn display_fmt(&self, ir: &Ir, pretty: bool) -> Result<DebugString, std::fmt::Error> {
-        let mut fmt = DebugString::default();
-        let kind = self.kind.display_fmt(ir, pretty)?;
-        write!(fmt, "{}", kind)?;
-        Ok(fmt)
-    }
-}
-
-impl TerminatorKind {
-    pub fn debug_fmt(&self, ir: &Ir, pretty: bool) -> Result<DebugString, std::fmt::Error> {
-        let mut fmt = DebugString::default();
+impl Display for TerminatorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TerminatorKind::Goto { target } => {
-                let block = ir.basic_block_data(*target).debug_fmt(ir, pretty)?;
-                if pretty {
-                    write!(fmt, "goto({:#?})", block)?;
-                } else {
-                    write!(fmt, "goto({:?})", block)?;
-                }
-            }
-            TerminatorKind::If { condition, targets } => {
-                let then_block = ir.basic_block_data(targets.0).debug_fmt(ir, pretty)?;
-                let else_block = ir.basic_block_data(targets.1).debug_fmt(ir, pretty)?;
-                if pretty {
-                    write!(
-                        fmt,
-                        "if({:#?}, {:#?}, {:#?})",
-                        condition, then_block, else_block
-                    )?;
-                } else {
-                    write!(
-                        fmt,
-                        "if({:?}, {:?}, {:?})",
-                        condition, then_block, else_block
-                    )?;
-                }
-            }
-            TerminatorKind::Return { expr } => {
-                if pretty {
-                    write!(fmt, "return {:#?}", expr)?;
-                } else {
-                    write!(fmt, "return {:?}", expr)?;
-                }
-            }
+            TerminatorKind::Return { expr } => write!(f, "return {}", expr),
+            TerminatorKind::Goto { target } => write!(f, "goto bb{}", target.index()),
+            TerminatorKind::If { condition, targets } => write!(
+                f,
+                "[if {} goto bb{} else goto bb{}]",
+                condition,
+                targets.0.index(),
+                targets.1.index()
+            ),
         }
-        Ok(fmt)
-    }
-    pub fn display_fmt(&self, ir: &Ir, pretty: bool) -> Result<DebugString, std::fmt::Error> {
-        let mut fmt = DebugString::default();
-        match self {
-            TerminatorKind::Goto { target } => {
-                let block = ir.basic_block_data(*target).display_fmt(ir, pretty)?;
-                write!(fmt, "goto:{{\n{}}}", block)?;
-            }
-            TerminatorKind::If { condition, targets } => {
-                let then_block = ir.basic_block_data(targets.0).display_fmt(ir, pretty)?;
-                let else_block = ir.basic_block_data(targets.1).display_fmt(ir, pretty)?;
-                write!(
-                    fmt,
-                    "if({}){{\n{}\n}}else{{:\n{}}})",
-                    condition, then_block, else_block
-                )?;
-            }
-            TerminatorKind::Return { expr } => {
-                write!(fmt, "return {}", expr)?;
-            }
-        }
-        Ok(fmt)
     }
 }
 
-impl Debug for BasicBlockData {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("bb")
-            .field("stmts", &self.statements)
-            .field("term", &self.terminator)
-            .finish()
-    }
-}
-
-impl Debug for Statement {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.kind)
-    }
-}
 impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.kind {
-            StatementKind::Assign(lhs, rhs) => write!(f, "{} = {}", lhs, rhs),
-            StatementKind::Modify(lhs, op, rhs) => write!(f, "{} {}= {}", lhs, op, rhs),
+            crate::StatementKind::Assign(lhs, rhs) => {
+                write!(f, "{} = {}", lhs, rhs)
+            }
+            crate::StatementKind::Modify(lhs, op, rhs) => {
+                write!(f, "{} {}= {}", lhs, op, rhs)
+            }
+        }
+    }
+}
+
+impl Display for Rvalue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Rvalue::IntegerLit(int) => write!(f, "{}", int),
+            Rvalue::Variable(var) => write!(f, "{}", var.ident),
+            Rvalue::Temp(temp) => write!(f, "t{}", temp.index),
+            Rvalue::BinaryExpr(lhs, op, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
+            Rvalue::Call(call) => write!(
+                f,
+                "{}({})",
+                call.name,
+                call.args
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
         }
     }
 }
@@ -185,51 +129,8 @@ impl Display for Statement {
 impl Display for Lvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Lvalue::Variable(x) => write!(f, "{}({:x})", x.ident.name, x.id),
-            Lvalue::Temp(x) => write!(f, "t{}({})", x.index, x.size),
-        }
-    }
-}
-impl Display for Rvalue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Rvalue::Variable(x) => write!(f, "{}({:x})", x.ident.name, x.id),
-            Rvalue::Temp(x) => write!(f, "t{}({})", x.index, x.size),
-            Rvalue::IntegerLit(x) => write!(f, "{}", x),
-            Rvalue::BinaryExpr(op, lhs, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
-            Rvalue::Call(call) => write!(f, "{}", call),
-        }
-    }
-}
-
-impl Display for FunctionCall {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}({})",
-            self.name,
-            self.args
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    }
-}
-
-impl Display for Operand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.kind)
-    }
-}
-
-impl Display for OperandKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            OperandKind::Consume(x) => write!(f, "{}", x),
-            OperandKind::IntegerLit(x) => write!(f, "{}", x),
-            OperandKind::Unit => write!(f, "()"),
-            OperandKind::FunctionCall(call) => write!(f, "{}", call),
+            Lvalue::Variable(var) => write!(f, "{}", var.ident),
+            Lvalue::Temp(temp) => write!(f, "t{}", temp.index),
         }
     }
 }
@@ -242,30 +143,36 @@ impl Display for ExprOperator {
             ExprOperator::Mul => write!(f, "*"),
             ExprOperator::Div => write!(f, "/"),
             ExprOperator::Eq => write!(f, "=="),
-            ExprOperator::Lt => write!(f, "<"),
             ExprOperator::Gt => write!(f, ">"),
-            ExprOperator::Lte => write!(f, "<="),
+            ExprOperator::Lt => write!(f, "<"),
             ExprOperator::Gte => write!(f, ">="),
+            ExprOperator::Lte => write!(f, "<="),
         }
     }
 }
 
-#[derive(Default)]
-pub struct DebugString(String);
+impl Display for Operand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.kind)
+    }
+}
 
-impl Display for DebugString {
+impl Display for OperandKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-impl Debug for DebugString {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-impl Write for DebugString {
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
-        self.0.push_str(s);
-        Ok(())
+        match self {
+            OperandKind::Consume(lvalue) => write!(f, "{}", lvalue),
+            OperandKind::IntegerLit(int) => write!(f, "{}", int),
+            OperandKind::FunctionCall(call) => write!(
+                f,
+                "{}({})",
+                call.name,
+                call.args
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            OperandKind::Unit => write!(f, "()"),
+        }
     }
 }
