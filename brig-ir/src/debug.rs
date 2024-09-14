@@ -16,7 +16,7 @@ impl Display for Ir {
             })
             .collect::<Vec<_>>();
 
-        writeln!(f, "fn {}({}) {{", self.fn_name, params.join(", "))?;
+        writeln!(f, "fn {}({}) {{", *self.fn_name.as_str(), params.join(", "))?;
 
         self.scopes.iter().enumerate().try_for_each(|(i, s)| {
             let indent = "    ".repeat(i);
@@ -115,7 +115,7 @@ impl Display for Rvalue {
             Rvalue::Call(call) => write!(
                 f,
                 "{}({})",
-                call.name,
+                *call.name.as_str(),
                 call.args
                     .iter()
                     .map(ToString::to_string)

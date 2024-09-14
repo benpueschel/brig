@@ -60,7 +60,10 @@ impl crate::Ir {
         match expr {
             brig_ast::Expression::Identifier(ident) => {
                 let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
-                    Error::other(format!("variable '{}' not found", ident.name), ident.span)
+                    Error::other(
+                        format!("variable '{}' not found", *ident.name.as_str()),
+                        ident.span,
+                    )
                 })?;
                 Ok(Lvalue::Variable(var))
             }
@@ -96,7 +99,10 @@ impl crate::Ir {
 
     pub fn traverse_identifier(&mut self, ident: brig_ast::Identifier, scope: Scope) -> Res {
         let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
-            Error::other(format!("variable '{}' not found", ident.name), ident.span)
+            Error::other(
+                format!("variable '{}' not found", *ident.name.as_str()),
+                ident.span,
+            )
         })?;
         Ok(Some(Operand {
             size: var.size,

@@ -44,7 +44,7 @@ mod test {
         // let a: usize = { let b: usize = 42; 12 + 24 };
         let mut stmt = Statement::VariableDeclaration(VariableDeclaration {
             name: Identifier {
-                name: "a".to_string(),
+                name: Symbol::intern("a"),
                 span: Span::with_len(4, 1),
             },
             ty: Ty {
@@ -56,7 +56,7 @@ mod test {
                 statements: vec![
                     Statement::VariableDeclaration(VariableDeclaration {
                         name: Identifier {
-                            name: "b".to_string(),
+                            name: Symbol::intern("b"),
                             span: Span::with_len(14, 1),
                         },
                         ty: Ty {
@@ -101,7 +101,7 @@ mod test {
         // let a: usize = { 42 };
         let mut stmt = Statement::VariableDeclaration(VariableDeclaration {
             name: Identifier {
-                name: "a".to_string(),
+                name: Symbol::intern("a"),
                 span: Span::with_len(4, 1),
             },
             ty: Ty {

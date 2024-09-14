@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use brig_common::sym::Symbol;
+
 use super::scratch::{self, ScratchRegisters};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,8 +40,8 @@ pub enum JumpCondition {
 pub enum Expression {
     IntegerLiteral(usize),
     Register(scratch::Register),
-    Memory(String),
-    Label(String),
+    Memory(Symbol),
+    Label(Symbol),
     None,
 }
 

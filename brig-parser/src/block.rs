@@ -28,7 +28,7 @@ mod test {
         AstNode, BinaryExpression, BinaryOperator, Block, Expression, Identifier, IntLit, Literal,
         LiteralType, LiteralValue, Statement, Ty, TyKind, UintType, VariableDeclaration,
     };
-    use brig_common::Span;
+    use brig_common::{sym::Symbol, Span};
     use brig_lexer::Lexer;
 
     use crate::Parser;
@@ -45,7 +45,7 @@ mod test {
             stmt,
             Statement::VariableDeclaration(VariableDeclaration {
                 name: Identifier {
-                    name: "x".to_string(),
+                    name: Symbol::intern("x"),
                     span: Span::with_len(4, 1),
                 },
                 ty: Ty {
@@ -81,7 +81,7 @@ mod test {
                 statements: vec![
                     Statement::VariableDeclaration(VariableDeclaration {
                         name: Identifier {
-                            name: "x".to_string(),
+                            name: Symbol::intern("x"),
                             span: Span::with_len(5, 1),
                         },
                         ty: Ty {
@@ -98,7 +98,7 @@ mod test {
                     }),
                     Statement::Expr(Expression::Binary(BinaryExpression {
                         lhs: Box::new(Expression::Identifier(Identifier {
-                            name: "x".to_string(),
+                            name: Symbol::intern("x"),
                             span: Span::with_len(14, 1),
                         })),
                         rhs: Box::new(Expression::Literal(Literal {
@@ -131,7 +131,7 @@ mod test {
                 statements: vec![
                     Statement::VariableDeclaration(VariableDeclaration {
                         name: Identifier {
-                            name: "x".to_string(),
+                            name: Symbol::intern("x"),
                             span: Span::with_len(5, 1),
                         },
                         ty: Ty {
@@ -148,7 +148,7 @@ mod test {
                     }),
                     Statement::Semi(Expression::Binary(BinaryExpression {
                         lhs: Box::new(Expression::Identifier(Identifier {
-                            name: "x".to_string(),
+                            name: Symbol::intern("x"),
                             span: Span::with_len(14, 1),
                         })),
                         rhs: Box::new(Expression::Literal(Literal {

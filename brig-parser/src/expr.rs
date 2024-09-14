@@ -157,6 +157,8 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
+    use brig_common::sym::Symbol;
+
     use crate::*;
 
     fn test_base(input: &str, expected: Expression) {
@@ -176,11 +178,11 @@ mod test {
             input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
-                    name: "x".to_string(),
+                    name: Symbol::intern("x"),
                     span: Span::new(0, 1),
                 })),
                 rhs: Box::new(Expression::Identifier(Identifier {
-                    name: "y".to_string(),
+                    name: Symbol::intern("y"),
                     span: Span::new(4, 5),
                 })),
                 op: BinaryOperator::Assign,
@@ -197,7 +199,7 @@ mod test {
             input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
-                    name: "x".to_string(),
+                    name: Symbol::intern("x"),
                     span: Span::new(0, 1),
                 })),
                 rhs: Box::new(Expression::Literal(Literal {
@@ -219,7 +221,7 @@ mod test {
             input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
-                    name: "x".to_string(),
+                    name: Symbol::intern("x"),
                     span: Span::new(0, 1),
                 })),
                 rhs: Box::new(Expression::Literal(Literal {
@@ -263,7 +265,7 @@ mod test {
         test_base(
             input,
             Expression::Identifier(Identifier {
-                name: "x".to_string(),
+                name: Symbol::intern("x"),
                 span: Span::new(0, 1),
             }),
         );
@@ -277,7 +279,7 @@ mod test {
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Binary(BinaryExpression {
                     lhs: Box::new(Expression::Identifier(Identifier {
-                        name: "x".to_string(),
+                        name: Symbol::intern("x"),
                         span: Span::new(1, 2),
                     })),
                     rhs: Box::new(Expression::Literal(Literal {
@@ -308,7 +310,7 @@ mod test {
             input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
-                    name: "x".to_string(),
+                    name: Symbol::intern("x"),
                     span: Span::new(0, 1),
                 })),
                 rhs: Box::new(Expression::Binary(BinaryExpression {
@@ -340,7 +342,7 @@ mod test {
             input,
             Expression::Binary(BinaryExpression {
                 lhs: Box::new(Expression::Identifier(Identifier {
-                    name: "x".to_string(),
+                    name: Symbol::intern("x"),
                     span: Span::new(0, 1),
                 })),
                 rhs: Box::new(Expression::Binary(BinaryExpression {

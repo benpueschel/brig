@@ -22,6 +22,7 @@
 //! Richard Stallman.
 //!
 use assembly_node::{AssemblyNode, Expression, Instruction, JumpCondition};
+use brig_common::sym::Symbol;
 use brig_diagnostic::Result;
 use brig_ir::{
     BasicBlock, ExprOperator, Ir, Lvalue, Operand, OperandKind, Statement, StatementKind, TempVal,
@@ -90,7 +91,7 @@ impl CodeGenerator for X86Linux {
             self.nodes.push(AssemblyNode {
                 instruction: Instruction::AssemblyDirective,
                 size: 0,
-                left: Expression::Label(format!(".globl {}", graph.fn_name)),
+                left: Expression::Label(Symbol::intern(&format!(".globl {}", graph.fn_name))),
                 right: Expression::None,
             });
         }
@@ -110,7 +111,7 @@ impl CodeGenerator for X86Linux {
         self.nodes.push(AssemblyNode {
             instruction: Instruction::LabelDeclaration,
             size: 0,
-            left: Expression::Label(graph.fn_name.clone()),
+            left: Expression::Label(graph.fn_name),
             right: Expression::None,
         });
 
@@ -219,11 +220,13 @@ impl X86Linux {
         });
         match node_data.location {
             scratch::ScratchLocation::Register(register) => Expression::Register(register),
-            scratch::ScratchLocation::Stack(offset) => Expression::Memory(format!(
-                "{}({})",
-                offset,
-                ScratchRegisters::get_name(scratch::RBP, 8)
-            )),
+            scratch::ScratchLocation::Stack(offset) => {
+                Expression::Memory(Symbol::intern(&format!(
+                    "{}({})",
+                    offset,
+                    ScratchRegisters::get_name(scratch::RBP, 8)
+                )))
+            }
             scratch::ScratchLocation::Unassigned => panic!("Unassigned register"),
         }
     }
@@ -261,7 +264,7 @@ impl X86Linux {
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Call,
                     size: 0,
-                    left: Expression::Label(call.name.clone()),
+                    left: Expression::Label(call.name),
                     right: Expression::None,
                 });
 
@@ -359,7 +362,7 @@ impl X86Linux {
     }
 
     fn label_alloc(&mut self) -> Expression {
-        let label = format!(".L{}", self.label_counter);
+        let label = Symbol::intern(&format!(".L{}", self.label_counter));
         self.label_counter += 1;
         Expression::Label(label)
     }

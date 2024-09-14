@@ -16,7 +16,7 @@ impl TypeChecker {
             Expression::Literal(ref mut lit) => self.check_literal(lit, ty),
             Expression::Call(ref mut call) => self.check_call_expression(call, ty),
             Expression::Identifier(ref ident) => {
-                let ident_ty = self.get_symbol(&ident.name).ok_or(Error::other(
+                let ident_ty = self.get_symbol(ident.name).ok_or(Error::other(
                     format!("Could not find type for '{}'", &ident.name),
                     ident.span,
                 ))?;
@@ -125,7 +125,7 @@ impl TypeChecker {
         call: &mut CallExpression,
         _ty: Option<&Ty>,
     ) -> Result<Ty> {
-        let call_def = self.get_symbol(&call.callee.name).ok_or(Error::other(
+        let call_def = self.get_symbol(call.callee.name).ok_or(Error::other(
             format!("Could not find function '{}'", &call.callee),
             call.span,
         ))?;
@@ -196,7 +196,7 @@ mod test {
         // let x: usize = 42;
         let mut decl = VariableDeclaration {
             name: Identifier {
-                name: "x".to_string(),
+                name: Symbol::intern("x"),
                 span: Span::new(4, 5),
             },
             ty: Ty {
@@ -234,7 +234,7 @@ mod test {
         // let x: u32 = 42;
         let mut decl = VariableDeclaration {
             name: Identifier {
-                name: "x".to_string(),
+                name: Symbol::intern("x"),
                 span: Span::new(4, 5),
             },
             ty: Ty {

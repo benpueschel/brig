@@ -13,7 +13,7 @@ impl TypeChecker {
 
     pub fn check_function_declaration(&mut self, decl: &mut FunctionDeclaration) -> Result<()> {
         let kind = TyKind::Function(FnTy {
-            name: decl.name.name.clone(),
+            name: decl.name.name,
             span: decl.span,
             args: decl.parameters.iter().map(|p| p.ty.clone()).collect(),
             ret: Box::new(decl.return_ty.clone()),
@@ -23,12 +23,12 @@ impl TypeChecker {
             size: 0,
             span: decl.span,
         };
-        self.add_symbol(decl.name.name.clone(), ty);
+        self.add_symbol(decl.name.name, ty);
 
         self.push_scope();
 
         for param in &decl.parameters {
-            self.add_symbol(param.ident.name.clone(), param.ty.clone());
+            self.add_symbol(param.ident.name, param.ty.clone());
         }
 
         // TODO: check parameters, check return type and maybe check if the return type matches the

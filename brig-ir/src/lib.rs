@@ -39,7 +39,7 @@
 use std::ops::{Index, IndexMut};
 
 use brig_ast::{BinaryOperator, Identifier};
-use brig_common::Span;
+use brig_common::{sym::Symbol, Span};
 
 pub mod build;
 pub mod debug;
@@ -55,7 +55,7 @@ pub const IR_FN_SCOPE: Scope = Scope(1);
 pub struct Ir {
     pub basic_blocks: Vec<BasicBlockData>,
     pub scopes: Vec<ScopeData>,
-    pub fn_name: String,
+    pub fn_name: Symbol,
     pub is_extern: bool,
     pub fn_params: Vec<u64>,
     pub span: Span,
@@ -149,7 +149,7 @@ pub enum StatementKind {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
-    pub name: String,
+    pub name: Symbol,
     pub ty: brig_ast::FnTy,
     pub args: Vec<Operand>,
     pub span: Span,
@@ -250,7 +250,6 @@ pub struct TempDecl {
     pub scope: Scope,
 }
 
-const VAR_UNINITIALIZED: usize = usize::MAX;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Var {
     // TODO: hide behind a debug flag - we exclusively use the id from this point on

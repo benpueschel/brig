@@ -84,6 +84,8 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
+    use brig_common::sym::Symbol;
+
     use crate::*;
 
     #[test]
@@ -101,14 +103,14 @@ mod test {
             Declaration {
                 kind: DeclarationKind::Function(FunctionDeclaration {
                     name: Identifier {
-                        name: "test".to_string(),
+                        name: Symbol::intern("test"),
                         span: Span::new(10, 14),
                     },
                     parameters: Punctuated {
                         elements: vec![
                             Parameter {
                                 ident: Identifier {
-                                    name: "a".to_string(),
+                                    name: Symbol::intern("a"),
                                     span: Span::new(15, 16),
                                 },
                                 ty: Ty {
@@ -120,7 +122,7 @@ mod test {
                             },
                             Parameter {
                                 ident: Identifier {
-                                    name: "b".to_string(),
+                                    name: Symbol::intern("b"),
                                     span: Span::new(25, 26),
                                 },
                                 ty: Ty {
@@ -165,7 +167,7 @@ mod test {
             function,
             FunctionDeclaration {
                 name: Identifier {
-                    name: "test".to_string(),
+                    name: Symbol::intern("test"),
                     span: Span::new(3, 7)
                 },
                 modifiers: vec![],
@@ -181,7 +183,7 @@ mod test {
                 body: Some(Block {
                     statements: vec![Statement::VariableDeclaration(VariableDeclaration {
                         name: Identifier {
-                            name: "x".to_string(),
+                            name: Symbol::intern("x"),
                             span: Span::new(28, 29)
                         },
                         ty: Ty {

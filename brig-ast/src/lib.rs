@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-use brig_common::Span;
+use brig_common::{sym::Symbol, Span};
 
 pub trait AstNode {
     fn span(&self) -> Span;
@@ -307,14 +307,14 @@ impl AstNode for Parameter {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Identifier {
     /// The name of the identifier.
-    pub name: String,
+    pub name: Symbol,
     /// The span of the identifier.
     pub span: Span,
 }
 
 impl Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
+        write!(f, "{}", *self.name.as_str())
     }
 }
 
@@ -351,7 +351,7 @@ pub enum TyKind {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnTy {
-    pub name: String,
+    pub name: Symbol,
     pub args: Vec<Ty>,
     pub ret: Box<Ty>,
     pub span: Span,
@@ -359,7 +359,7 @@ pub struct FnTy {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    pub name: String,
+    pub name: Symbol,
     pub ty: Ty,
 }
 
@@ -367,7 +367,7 @@ impl Display for TyKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TyKind::Function(func) => {
-                write!(f, "fn {}(", func.name)?;
+                write!(f, "fn {}(", *func.name.as_str())?;
                 for (i, arg) in func.args.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
@@ -377,7 +377,7 @@ impl Display for TyKind {
                 write!(f, "): {}", func.ret.kind)
             }
             TyKind::Literal(l) => write!(f, "{}", l),
-            TyKind::UserDefined(ident) => write!(f, "{}", ident.name),
+            TyKind::UserDefined(ident) => write!(f, "{}", *ident.name.as_str()),
             TyKind::Unspecified => write!(f, "unspecified"),
         }
     }

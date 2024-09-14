@@ -15,12 +15,12 @@ pub fn populate_global_decls(program: &Program) -> Result<()> {
 
                 let ret = parse_ast_ty(&func.return_ty)?;
                 let kind = TyKind::Function(FnTy {
-                    name: func.name.name.clone(),
+                    name: func.name.name,
                     args,
                     ret: Box::new(ret),
                 });
                 let ty = Ty { kind };
-                crate::add_ty(&func.name.name, ty);
+                crate::add_ty(func.name.name, ty);
             }
         }
     }
@@ -55,9 +55,14 @@ pub fn parse_ast_ty(ty: &brig_ast::Ty) -> Result<Ty> {
         },
         brig_ast::TyKind::UserDefined(ident) => {
             let name = &ident.name;
-            match get_ty(name) {
+            match get_ty(*name) {
                 Some(ty) => ty.kind,
-                None => return Err(Error::other(format!("unknown type: {name}"), ident.span)),
+                None => {
+                    return Err(Error::other(
+                        format!("unknown type: {}", *name.as_str()),
+                        ident.span,
+                    ))
+                }
             }
         }
         brig_ast::TyKind::Function(_) => todo!("Function type"),

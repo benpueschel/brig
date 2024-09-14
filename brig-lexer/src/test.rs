@@ -18,7 +18,7 @@ fn test_whitespaces() {
         program,
         vec![
             Token::with_len(TokenKind::Fn, 0, 2),
-            Token::with_len(TokenKind::Identifier("main".to_string()), 8, 4),
+            Token::with_len(TokenKind::Identifier(Symbol::intern("main")), 8, 4),
             Token::with_len(TokenKind::ParenOpen, 12, 1),
             Token::with_len(TokenKind::ParenClose, 13, 1),
             Token::with_len(TokenKind::BraceOpen, 19, 1),
@@ -33,7 +33,7 @@ fn test_no_whitespaces() {
     test_lexer(
         program,
         vec![
-            Token::with_len(TokenKind::Identifier("x".to_string()), 0, 1),
+            Token::with_len(TokenKind::Identifier(Symbol::intern("x")), 0, 1),
             Token::with_len(TokenKind::Plus, 1, 1),
             Token::with_len(TokenKind::Integer(2), 2, 1),
             Token::with_len(TokenKind::Star, 3, 1),
@@ -51,7 +51,7 @@ fn test_invalid_number() {
         error,
         vec![
             Token::with_len(TokenKind::Integer(1), 0, 1),
-            Token::with_len(TokenKind::Identifier("abc".to_string()), 1, 3)
+            Token::with_len(TokenKind::Identifier(Symbol::intern("abc")), 1, 3)
         ]
     );
 }
@@ -83,17 +83,17 @@ fn test_program() {
         program,
         vec![
             Token::with_len(TokenKind::Fn, 0, 2),
-            Token::with_len(TokenKind::Identifier("main".to_string()), 3, 4),
+            Token::with_len(TokenKind::Identifier(Symbol::intern("main")), 3, 4),
             Token::with_len(TokenKind::ParenOpen, 7, 1),
             Token::with_len(TokenKind::ParenClose, 8, 1),
             Token::with_len(TokenKind::BraceOpen, 10, 1),
             Token::with_len(TokenKind::Let, 12, 3),
-            Token::with_len(TokenKind::Identifier("a".to_string()), 16, 1),
+            Token::with_len(TokenKind::Identifier(Symbol::intern("a")), 16, 1),
             Token::with_len(TokenKind::Equal, 18, 1),
             Token::with_len(TokenKind::Integer(1), 20, 1),
             Token::with_len(TokenKind::Semicolon, 21, 1),
             Token::with_len(TokenKind::Return, 23, 6),
-            Token::with_len(TokenKind::Identifier("a".to_string()), 30, 1),
+            Token::with_len(TokenKind::Identifier(Symbol::intern("a")), 30, 1),
             Token::with_len(TokenKind::Plus, 32, 1),
             Token::with_len(TokenKind::Integer(3), 34, 1),
             Token::with_len(TokenKind::Semicolon, 35, 1),

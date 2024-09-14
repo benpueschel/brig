@@ -24,7 +24,7 @@ impl TypeChecker {
                     (decl.ty.kind.clone(), decl.span),
                 ));
             }
-            self.add_symbol(decl.name.name.clone(), ty);
+            self.add_symbol(decl.name.name, ty);
         }
         Ok(())
     }
@@ -69,7 +69,7 @@ mod test {
         // let x: u32 = 42;
         let mut decl = VariableDeclaration {
             name: Identifier {
-                name: "x".to_string(),
+                name: Symbol::intern("x"),
                 span: Span::new(4, 5),
             },
             ty: Ty {

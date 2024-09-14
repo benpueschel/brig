@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 
 use brig_ast::{Program, Ty};
+use brig_common::sym::Symbol;
 use brig_diagnostic::Result;
 
 mod block;
@@ -14,7 +15,7 @@ mod stmt;
 
 #[derive(Debug)]
 pub struct TypeChecker {
-    symbols: Vec<HashMap<String, Ty>>,
+    symbols: Vec<HashMap<Symbol, Ty>>,
 }
 
 impl TypeChecker {
@@ -36,18 +37,18 @@ impl TypeChecker {
         self.symbols.push(HashMap::new());
     }
 
-    pub fn pop_scope(&mut self) -> Option<HashMap<String, Ty>> {
+    pub fn pop_scope(&mut self) -> Option<HashMap<Symbol, Ty>> {
         self.symbols.pop()
     }
 
-    pub fn add_symbol(&mut self, name: String, ty: Ty) {
+    pub fn add_symbol(&mut self, name: Symbol, ty: Ty) {
         let symbols = self.symbols.last_mut().expect("No scope pushed");
         symbols.insert(name, ty);
     }
 
-    pub fn get_symbol(&self, name: &str) -> Option<Ty> {
+    pub fn get_symbol(&self, name: Symbol) -> Option<Ty> {
         for scope in self.symbols.iter().rev() {
-            let symbol = scope.get(name).cloned();
+            let symbol = scope.get(&name).cloned();
             if symbol.is_some() {
                 return symbol;
             }

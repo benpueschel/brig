@@ -136,7 +136,7 @@ impl Parser {
             TokenKind::Identifier(_) => {
                 let ident = ident_from_token(self.eat()?)?;
                 let span = ident.span;
-                let (size, kind) = match ident.name.as_str() {
+                let (size, kind) = match (*ident.name.clone().as_str()).as_str() {
                     "u32" => (4, TyKind::Literal(LiteralType::Uint(UintType::U32))),
                     "usize" => (8, TyKind::Literal(LiteralType::Uint(UintType::Usize))),
                     _ => (0, TyKind::UserDefined(ident)),
@@ -150,6 +150,8 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
+    use brig_common::sym::Symbol;
+
     use crate::*;
     #[test]
     pub fn parse_empty_type() {
@@ -209,7 +211,7 @@ mod test {
             ty,
             Ty {
                 kind: TyKind::UserDefined(Identifier {
-                    name: "MyType".to_string(),
+                    name: Symbol::intern("MyType"),
                     span: Span::new(2, 8),
                 }),
                 span: Span::new(2, 8),

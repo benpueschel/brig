@@ -81,6 +81,8 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
+    use brig_common::sym::Symbol;
+
     use crate::*;
 
     #[test]
@@ -93,7 +95,7 @@ mod test {
             statement,
             Statement::Return(ReturnStatement {
                 expr: Expression::Identifier(Identifier {
-                    name: "var".to_string(),
+                    name: Symbol::intern("var"),
                     span: Span::new(7, 10),
                 }),
                 span: Span::new(0, 10),
@@ -111,7 +113,7 @@ mod test {
             statement,
             Statement::VariableDeclaration(VariableDeclaration {
                 name: Identifier {
-                    name: "var".to_string(),
+                    name: Symbol::intern("var"),
                     span: Span::new(4, 7),
                 },
                 ty: Ty {
@@ -139,7 +141,7 @@ mod test {
             statement,
             Statement::VariableDeclaration(VariableDeclaration {
                 name: Identifier {
-                    name: "var".to_string(),
+                    name: Symbol::intern("var"),
                     span: Span::new(4, 7),
                 },
                 ty: Ty {

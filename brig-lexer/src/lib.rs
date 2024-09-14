@@ -1,6 +1,7 @@
 use std::fmt::Formatter;
 use std::fmt::{self, Display};
 
+use brig_common::sym::Symbol;
 use brig_common::Span;
 use brig_diagnostic::{Error, Result};
 
@@ -37,7 +38,7 @@ pub enum TokenKind {
     If,
     Else,
     Integer(usize),
-    Identifier(String),
+    Identifier(Symbol),
     Equal,
     Star,
     Percent,
@@ -63,7 +64,7 @@ impl Display for TokenKind {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             TokenKind::Integer(value) => write!(f, "int_lit({})", value),
-            TokenKind::Identifier(name) => write!(f, "ident({})", name),
+            TokenKind::Identifier(name) => write!(f, "ident({})", *name.as_str()),
             x => write!(f, "{}", x.to_str()),
         }
     }
@@ -207,7 +208,7 @@ impl Lexer {
         let identifier = &data[0..i];
         if skip_keyword_val {
             return Ok(Token {
-                kind: TokenKind::Identifier(identifier.to_string()),
+                kind: TokenKind::Identifier(Symbol::intern(identifier)),
                 span: Span::with_len(pos, i),
             });
         }
@@ -220,7 +221,7 @@ impl Lexer {
                 "fn" => TokenKind::Fn,
                 "if" => TokenKind::If,
                 "else" => TokenKind::Else,
-                _ => TokenKind::Identifier(identifier.to_string()),
+                _ => TokenKind::Identifier(Symbol::intern(identifier)),
             },
             span: Span::with_len(pos, identifier.len()),
         })
