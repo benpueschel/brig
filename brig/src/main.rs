@@ -58,13 +58,17 @@ fn main() {
                 .unwrap();
             brig_ir::resolve::resolve_symbols_mut(&mut ir);
 
-            codegen
-                .process_graph(ir)
-                .map_err(|err| report_error(err, &input))
-                .unwrap();
-            let asm = brig_codegen::x86_linux::codegen::generate_code(&codegen.nodes);
-            output.push_str(&asm);
-            output.push('\n');
+            if args.print_ir {
+                output.push_str(&format!("{}\n", ir));
+            } else {
+                codegen
+                    .process_graph(ir)
+                    .map_err(|err| report_error(err, &input))
+                    .unwrap();
+                let asm = brig_codegen::x86_linux::codegen::generate_code(&codegen.nodes);
+                output.push_str(&asm);
+                output.push('\n');
+            }
         }
     }
 

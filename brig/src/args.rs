@@ -10,6 +10,10 @@ pub struct Args {
     #[arg(short, long)]
     pub output: Option<String>,
 
+    /// Print the intermediate representation
+    #[arg(short, long)]
+    pub print_ir: bool,
+
     /// The input files
     ///
     /// Currently only supports a single input file.
