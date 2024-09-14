@@ -1,0 +1,3 @@
+fn main() {
+	let a: usize = 1 + 2;
+}

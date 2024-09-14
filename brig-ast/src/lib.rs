@@ -393,6 +393,17 @@ pub enum LiteralType {
     Unresolved,
 }
 
+impl LiteralType {
+    pub fn size(&self) -> usize {
+        match self {
+            LiteralType::Uint(UintType::U32) => 4,
+            LiteralType::Uint(UintType::Usize) => std::mem::size_of::<usize>(),
+            LiteralType::Unit => 0,
+            LiteralType::Unresolved => usize::MAX,
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum UintType {
     /// A 32-bit unsigned integer.

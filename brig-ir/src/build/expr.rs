@@ -84,7 +84,7 @@ impl crate::Ir {
     pub fn traverse_literal(&mut self, lit: brig_ast::Literal) -> Res {
         match lit.value {
             brig_ast::LiteralValue::Int(val) => Ok(Some(Operand {
-                size: 0, // TODO: size from lit.ty
+                size: lit.ty.size(),
                 kind: OperandKind::IntegerLit(val.value),
             })),
             brig_ast::LiteralValue::Unit => Ok(Some(Operand {

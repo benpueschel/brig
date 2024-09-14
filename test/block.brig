@@ -1,7 +1,7 @@
-fn main(): usize {
+extern fn main(): usize {
 	let a: usize = {
-		let b: usize = 12;
-		42
+		let b: usize = 12 + 24;
+		b + 0
 	};
 	return a;
 }
