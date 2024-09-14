@@ -1,0 +1,7 @@
+fn main(): usize {
+	let a: usize = {
+		let b: usize = 12;
+		42
+	};
+	return a;
+}

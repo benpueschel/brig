@@ -13,8 +13,14 @@ impl Parser {
 
     pub fn parse_expression_statement(&mut self) -> Result<Statement> {
         let expr = self.parse_expression()?;
-        verify_token!(self.eat()?, TokenKind::Semicolon);
-        Ok(Statement::Expression(expr))
+        match self.peek()?.kind {
+            TokenKind::Semicolon => {
+                // TODO: include semicolon in span
+                self.eat()?;
+                Ok(Statement::Semi(expr))
+            }
+            _ => Ok(Statement::Expr(expr)),
+        }
     }
 
     pub fn parse_variable_declaration(&mut self) -> Result<Statement> {
@@ -76,6 +82,24 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use crate::*;
+
+    #[test]
+    pub fn parse_literal_expression() {
+        let input = "return var;";
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let statement = parser.parse_statement().expect("Failed to parse statement");
+        assert_eq!(
+            statement,
+            Statement::Return(ReturnStatement {
+                expr: Expression::Identifier(Identifier {
+                    name: "var".to_string(),
+                    span: Span::new(7, 10),
+                }),
+                span: Span::new(0, 10),
+            })
+        );
+    }
 
     #[test]
     pub fn parse_usize_assignment() {

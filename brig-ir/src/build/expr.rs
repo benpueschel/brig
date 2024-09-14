@@ -2,73 +2,24 @@ use brig_ast::{AstNode, BinaryExpression, BinaryOperator, CallExpression, Expres
 use brig_diagnostic::{Error, Result};
 
 use crate::{
-    resolve, FunctionCall, Lvalue, Operand, OperandKind, Rvalue, Scope, Statement, StatementKind,
-    TempDecl, TempVal,
+    resolve, FunctionCall, Lvalue, Operand, OperandKind, Scope, Statement, StatementKind, TempDecl,
+    TempVal,
 };
 
+type Res = Result<Option<Operand>>;
+
 impl crate::Ir {
-    pub(crate) fn traverse_expr_stmt(
-        &mut self,
-        expr: brig_ast::Expression,
-        scope: Scope,
-    ) -> Result<Vec<Statement>> {
+    pub fn traverse_expr(&mut self, expr: Expression, scope: Scope) -> Res {
         match expr {
-            brig_ast::Expression::Call(call) => {
-                let (_op, stmts) = self.traverse_call_expression(call, scope)?;
-                Ok(stmts)
-            }
-            brig_ast::Expression::Literal(lit) => Err(Error::other(
-                format!("literal '{:?}' is not a statement", lit.value),
-                lit.span,
-            )),
-            brig_ast::Expression::Binary(expr) => {
-                if let BinaryOperator::Assign = expr.op {
-                    let left = self.traverse_lvalue(*expr.lhs, scope)?;
-                    let (right, mut stmts) = self.traverse_rvalue(*expr.rhs, scope)?;
-                    stmts.push(Statement {
-                        kind: StatementKind::Assign(left, right),
-                        span: expr.span,
-                    });
-                    return Ok(stmts);
-                }
-                Ok(vec![])
-            }
-            brig_ast::Expression::Identifier(ident) => Err(Error::other(
-                format!("identifier '{}' is not a statement", ident.name),
-                ident.span,
-            )),
+            Expression::Call(c) => self.traverse_call_expression(c, scope),
+            Expression::Literal(lit) => self.traverse_literal(lit),
+            Expression::Binary(expr) => self.traverse_binary(expr, scope),
+            Expression::Identifier(ident) => self.traverse_identifier(ident, scope),
+            Expression::Block(block) => Ok(self.traverse_block(block, scope)?.1),
         }
     }
 
-    pub(crate) fn traverse_expr(
-        &mut self,
-        expr: brig_ast::Expression,
-        scope: Scope,
-    ) -> Result<(Operand, Vec<Statement>)> {
-        match expr {
-            brig_ast::Expression::Call(call) => self.traverse_call_expression(call, scope),
-            brig_ast::Expression::Literal(_) => todo!("literal expression"),
-            brig_ast::Expression::Binary(expr) => self.traverse_binary_expr(expr, scope),
-            brig_ast::Expression::Identifier(ident) => {
-                let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
-                    Error::other(format!("variable '{}' not found", ident.name), ident.span)
-                })?;
-                Ok((
-                    Operand {
-                        size: var.size,
-                        kind: OperandKind::Consume(Lvalue::Variable(var)),
-                    },
-                    vec![],
-                ))
-            }
-        }
-    }
-
-    pub(crate) fn traverse_binary_expr_as_rvalue(
-        &mut self,
-        expr: BinaryExpression,
-        scope: Scope,
-    ) -> Result<(Rvalue, Vec<Statement>)> {
+    pub fn traverse_binary(&mut self, expr: BinaryExpression, scope: Scope) -> Res {
         if let BinaryOperator::Assign = expr.op {
             return Err(Error::other(
                 "assignment operator '=' is not an rvalue expression",
@@ -76,48 +27,36 @@ impl crate::Ir {
             ));
         }
 
-        let (left, mut stmts) = self.traverse_rvalue(*expr.lhs, scope)?;
-        let (right, right_stmts) = self.traverse_rvalue(*expr.rhs, scope)?;
-        stmts.extend(right_stmts);
-
-        Ok((Rvalue::BinaryExpr(expr.op.into(), left, right), stmts))
-    }
-
-    pub(crate) fn traverse_binary_expr(
-        &mut self,
-        expr: BinaryExpression,
-        scope: Scope,
-    ) -> Result<(Operand, Vec<Statement>)> {
-        if let BinaryOperator::Assign = expr.op {
-            return Err(Error::other(
-                "assignment operator '=' is not an rvalue expression",
+        let left = self.traverse_rvalue(*expr.lhs, scope)?.ok_or_else(|| {
+            Error::other(
+                "left-hand side of binary expression is not an rvalue",
                 expr.span,
-            ));
-        }
-        let (left, mut stmts) = self.traverse_rvalue(*expr.lhs, scope)?;
-        let (right, right_stmts) = self.traverse_rvalue(*expr.rhs, scope)?;
+            )
+        })?;
+        let right = self.traverse_rvalue(*expr.rhs, scope)?.ok_or_else(|| {
+            Error::other(
+                "right-hand side of binary expression is not an rvalue",
+                expr.span,
+            )
+        })?;
         let size = left.size.max(right.size);
 
-        stmts.extend(right_stmts);
         let temp = Lvalue::Temp(self.alloc_temp(size, scope));
-        stmts.push(Statement {
+        self.current_block_mut().statements.push(Statement {
             span: expr.span,
             kind: StatementKind::Assign(temp.clone(), left),
         });
-        stmts.push(Statement {
+        self.current_block_mut().statements.push(Statement {
             span: expr.span,
             kind: StatementKind::Modify(temp.clone(), expr.op.into(), right),
         });
-        Ok((
-            Operand {
-                size,
-                kind: OperandKind::Consume(temp),
-            },
-            stmts,
-        ))
+        Ok(Some(Operand {
+            size,
+            kind: OperandKind::Consume(temp),
+        }))
     }
 
-    pub(crate) fn traverse_lvalue(&mut self, expr: Expression, scope: Scope) -> Result<Lvalue> {
+    pub fn traverse_lvalue(&mut self, expr: Expression, scope: Scope) -> Result<Lvalue> {
         match expr {
             brig_ast::Expression::Identifier(ident) => {
                 let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
@@ -132,72 +71,64 @@ impl crate::Ir {
         }
     }
 
-    pub(crate) fn traverse_rvalue(
-        &mut self,
-        expr: Expression,
-        scope: Scope,
-    ) -> Result<(Operand, Vec<Statement>)> {
+    pub fn traverse_rvalue(&mut self, expr: Expression, scope: Scope) -> Res {
         match expr {
-            Expression::Binary(expr) => self.traverse_binary_expr(expr, scope),
-            Expression::Literal(lit) => match lit.value {
-                brig_ast::LiteralValue::Int(val) => Ok((
-                    Operand {
-                        size: 0,
-                        kind: OperandKind::IntegerLit(val.value),
-                    },
-                    vec![],
-                )),
-                brig_ast::LiteralValue::Unit => Ok((
-                    Operand {
-                        size: 0,
-                        kind: OperandKind::Unit,
-                    },
-                    vec![],
-                )),
-            },
-            Expression::Identifier(ident) => {
-                let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
-                    Error::other(format!("variable '{}' not found", ident.name), ident.span)
-                })?;
-                Ok((
-                    Operand {
-                        size: var.size,
-                        kind: OperandKind::Consume(Lvalue::Variable(var)),
-                    },
-                    vec![],
-                ))
-            }
+            Expression::Binary(expr) => self.traverse_binary(expr, scope),
             Expression::Call(call) => self.traverse_call_expression(call, scope),
+            Expression::Block(block) => self.traverse_block(block, scope).map(|x| x.1),
+            Expression::Literal(lit) => self.traverse_literal(lit),
+            Expression::Identifier(ident) => self.traverse_identifier(ident, scope),
         }
     }
 
-    pub(crate) fn traverse_call_expression(
-        &mut self,
-        call: CallExpression,
-        scope: Scope,
-    ) -> Result<(Operand, Vec<Statement>)> {
+    pub fn traverse_literal(&mut self, lit: brig_ast::Literal) -> Res {
+        match lit.value {
+            brig_ast::LiteralValue::Int(val) => Ok(Some(Operand {
+                size: 0, // TODO: size from lit.ty
+                kind: OperandKind::IntegerLit(val.value),
+            })),
+            brig_ast::LiteralValue::Unit => Ok(Some(Operand {
+                size: 0,
+                kind: OperandKind::Unit,
+            })),
+        }
+    }
+
+    pub fn traverse_identifier(&mut self, ident: brig_ast::Identifier, scope: Scope) -> Res {
+        let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
+            Error::other(format!("variable '{}' not found", ident.name), ident.span)
+        })?;
+        Ok(Some(Operand {
+            size: var.size,
+            kind: OperandKind::Consume(Lvalue::Variable(var)),
+        }))
+    }
+
+    pub fn traverse_call_expression(&mut self, call: CallExpression, scope: Scope) -> Res {
         let fn_ty = match call.fn_ty {
             Some(ty) => ty,
             None => return Err(Error::other("function type not found", call.span)),
         };
 
-        let mut stmts = vec![];
         let mut args = vec![];
         for arg in call.args {
-            let (arg, arg_stmts) = self.traverse_rvalue(arg, scope)?;
-            stmts.extend(arg_stmts);
-            args.push(arg);
+            let span = arg.span();
+            args.push(
+                self.traverse_rvalue(arg, scope)?
+                    .ok_or_else(|| Error::other("argument is not an rvalue", span))?,
+            );
         }
 
-        let temp = Lvalue::Temp(self.alloc_temp(fn_ty.ret.size, scope));
         let size = fn_ty.ret.size;
+        let temp = Lvalue::Temp(self.alloc_temp(size, scope));
         let func = FunctionCall {
             name: call.callee.name,
             ty: fn_ty,
-            args,
             span: call.span,
+            args,
         };
-        stmts.push(Statement {
+
+        self.current_block_mut().statements.push(Statement {
             span: call.span,
             kind: StatementKind::Assign(
                 temp.clone(),
@@ -207,13 +138,11 @@ impl crate::Ir {
                 },
             ),
         });
-        Ok((
-            Operand {
-                kind: OperandKind::Consume(temp),
-                size,
-            },
-            stmts,
-        ))
+
+        Ok(Some(Operand {
+            kind: OperandKind::Consume(temp),
+            size,
+        }))
     }
 
     fn alloc_temp(&mut self, size: usize, scope: Scope) -> TempVal {
@@ -221,7 +150,7 @@ impl crate::Ir {
         data.temp_decls.push(TempDecl { scope });
         TempVal {
             size,
-            index: data.temp_decls.len() - 1,
+            index: data.temp_decls.len() as u64 - 1,
         }
     }
 }

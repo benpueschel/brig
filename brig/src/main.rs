@@ -48,11 +48,12 @@ fn main() {
 
     let mut output = String::new();
 
-    for decl in &program.declarations {
+    for decl in program.declarations {
         // TODO: other kinds of declarations
         #[allow(irrefutable_let_patterns)]
-        if let DeclarationKind::Function(func) = &decl.kind {
-            let mut ir = IrBuilder::build(func.clone())
+        if let DeclarationKind::Function(func) = decl.kind {
+            let mut ir = IrBuilder::new(func)
+                .build()
                 .map_err(|err| report_error(err, &input))
                 .unwrap();
             brig_ir::resolve::resolve_symbols_mut(&mut ir);

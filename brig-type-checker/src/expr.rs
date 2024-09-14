@@ -10,7 +10,7 @@ use crate::TypeChecker;
 impl TypeChecker {
     /// NOTE: The `ty` field is used to coerce literals (e.g. `42` to `u32`).
     /// That's not great, but I don't care right now.
-    pub fn check_expression(&self, expr: &mut Expression, ty: Option<&Ty>) -> Result<Ty> {
+    pub fn check_expression(&mut self, expr: &mut Expression, ty: Option<&Ty>) -> Result<Ty> {
         match expr {
             Expression::Binary(ref mut e) => self.check_binary_expression(e, ty),
             Expression::Literal(ref mut lit) => self.check_literal(lit, ty),
@@ -34,6 +34,7 @@ impl TypeChecker {
                     size: ident_ty.size,
                 })
             }
+            Expression::Block(block) => self.check_block(block, ty),
         }
     }
 
@@ -119,7 +120,11 @@ impl TypeChecker {
         }
     }
 
-    pub fn check_call_expression(&self, call: &mut CallExpression, _ty: Option<&Ty>) -> Result<Ty> {
+    pub fn check_call_expression(
+        &mut self,
+        call: &mut CallExpression,
+        _ty: Option<&Ty>,
+    ) -> Result<Ty> {
         let call_def = self.get_symbol(&call.callee.name).ok_or(Error::other(
             format!("Could not find function '{}'", &call.callee),
             call.span,
@@ -158,7 +163,7 @@ impl TypeChecker {
     }
 
     pub fn check_binary_expression(
-        &self,
+        &mut self,
         expr: &mut BinaryExpression,
         ty: Option<&Ty>,
     ) -> Result<Ty> {

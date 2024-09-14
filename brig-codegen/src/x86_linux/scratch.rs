@@ -25,12 +25,12 @@ pub type Register = usize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RegisterNode {
-    pub value: usize,
+    pub value: u64,
     pub size: usize,
 }
 
 impl RegisterNode {
-    pub fn new(value: usize, size: usize) -> Self {
+    pub fn new(value: u64, size: usize) -> Self {
         RegisterNode { value, size }
     }
 }

@@ -152,53 +152,53 @@ mod test {
     #[test]
     pub fn parse_function() {
         let input = "fn test() {
-        let x = 5;
-    }";
+            let x = 5;
+        }";
         let lexer = Lexer::new(input.to_string());
         let mut parser = Parser::new(lexer);
         let function = parser
             .parse_function_declaration(vec![])
             .expect("Failed to parse function");
 
-        assert_eq!(function.span(), Span::new(0, 29));
+        assert_eq!(function.span(), Span::new(0, 33));
         assert_eq!(
             function,
             FunctionDeclaration {
-                modifiers: vec![],
                 name: Identifier {
                     name: "test".to_string(),
-                    span: Span::new(3, 7),
+                    span: Span::new(3, 7)
                 },
+                modifiers: vec![],
                 parameters: Punctuated {
                     elements: vec![],
-                    span: Span::new(8, 9),
+                    span: Span::new(8, 9)
                 },
                 return_ty: Ty {
                     kind: TyKind::Unspecified,
-                    span: Span::new(10, 10),
                     size: 0,
+                    span: Span::new(10, 10)
                 },
                 body: Some(Block {
                     statements: vec![Statement::VariableDeclaration(VariableDeclaration {
                         name: Identifier {
                             name: "x".to_string(),
-                            span: Span::new(24, 25),
+                            span: Span::new(28, 29)
                         },
                         ty: Ty {
                             kind: TyKind::Unspecified,
                             size: 0,
-                            span: Span::new(26, 26),
+                            span: Span::new(30, 30)
                         },
                         expr: Some(Expression::Literal(Literal {
                             value: LiteralValue::Int(IntLit { value: 5 }),
                             ty: LiteralType::Unresolved,
-                            span: Span::new(28, 29),
+                            span: Span::new(32, 33)
                         })),
-                        span: Span::new(20, 29),
+                        span: Span::new(24, 33)
                     })],
-                    span: Span::new(20, 29),
+                    span: Span::new(10, 33)
                 }),
-                span: Span::new(0, 29),
+                span: Span::new(0, 33)
             }
         );
     }

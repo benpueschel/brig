@@ -154,17 +154,21 @@ impl AstNode for Block {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
-    Expression(Expression),
+    Expr(Expression),
+    Semi(Expression),
     VariableDeclaration(VariableDeclaration),
     Return(ReturnStatement),
+    None,
 }
 
 impl AstNode for Statement {
     fn span(&self) -> Span {
         match self {
-            Statement::Expression(e) => e.span(),
+            Statement::Expr(e) => e.span(),
+            Statement::Semi(e) => e.span(),
             Statement::VariableDeclaration(v) => v.span(),
             Statement::Return(e) => e.span(),
+            Statement::None => Span::default(),
         }
     }
 }
@@ -207,6 +211,7 @@ pub enum Expression {
     Literal(Literal),
     Binary(BinaryExpression),
     Identifier(Identifier),
+    Block(Block),
 }
 
 impl AstNode for Expression {
@@ -216,6 +221,7 @@ impl AstNode for Expression {
             Expression::Binary(b) => b.span,
             Expression::Identifier(v) => v.span,
             Expression::Call(c) => c.span,
+            Expression::Block(b) => b.span,
         }
     }
 }

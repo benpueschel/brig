@@ -8,10 +8,11 @@ impl TypeChecker {
     /// But it works right now. I gotta refactor all this anyway.
     pub fn check_statement(&mut self, stmt: &mut Statement, ty: Option<&Ty>) -> Result<()> {
         match stmt {
-            // Statement::Expression => map the returned Ty to ()
-            Statement::Expression(ref mut e) => self.check_expression(e, None).map(|_| ()),
-            Statement::VariableDeclaration(ref mut decl) => self.check_variable_declaration(decl),
+            Statement::Expr(ref mut e) => self.check_expression(e, None).map(|_| ()),
+            Statement::Semi(ref mut e) => self.check_expression(e, None).map(|_| ()),
             Statement::Return(ref mut ret) => self.check_expression(&mut ret.expr, ty).map(|_| ()),
+            Statement::VariableDeclaration(ref mut decl) => self.check_variable_declaration(decl),
+            Statement::None => Ok(()),
         }
     }
     pub fn check_variable_declaration(&mut self, decl: &mut VariableDeclaration) -> Result<()> {
@@ -47,7 +48,8 @@ mod test {
             span: Span::new(0, 10),
         });
         let mut tc = TypeChecker::default();
-        tc.check_statement(&mut stmt, None).expect("type check failed");
+        tc.check_statement(&mut stmt, None)
+            .expect("type check failed");
 
         assert_eq!(
             stmt,

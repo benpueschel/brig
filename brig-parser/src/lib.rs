@@ -7,6 +7,7 @@ use brig_diagnostic::{Error, Result};
 use brig_lexer::{Lexer, Token, TokenKind};
 use brig_macros::verify_token;
 
+mod block;
 mod decl;
 mod expr;
 mod stmt;
@@ -70,25 +71,6 @@ impl Parser {
             program.declarations.push(self.parse_declaration()?);
         }
         Ok(program)
-    }
-
-    /// Parse a single block of code, containing a series of statements.
-    pub fn parse_block(&mut self) -> Result<Block> {
-        verify_token!(self.eat()?, TokenKind::BraceOpen);
-
-        let mut statements = Vec::new();
-        while self.peek()?.kind != TokenKind::BraceClose {
-            statements.push(self.parse_statement()?);
-        }
-
-        verify_token!(self.eat()?, TokenKind::BraceClose);
-
-        let span = Span::compose(
-            statements.first().map(|s| s.span()).unwrap_or_default(),
-            statements.last().map(|s| s.span()).unwrap_or_default(),
-        );
-
-        Ok(Block { span, statements })
     }
 
     /// Parse a punctuation-separated list of elements enclosed by parenthesis, where each element

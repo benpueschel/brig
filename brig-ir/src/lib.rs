@@ -51,6 +51,7 @@ pub const IR_END_BLOCK: BasicBlock = BasicBlock(1);
 pub const IR_GLOBAL_SCOPE: Scope = Scope(0);
 pub const IR_FN_SCOPE: Scope = Scope(1);
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Ir {
     pub basic_blocks: Vec<BasicBlockData>,
     pub scopes: Vec<ScopeData>,
@@ -106,7 +107,7 @@ impl IndexMut<BasicBlock> for Vec<BasicBlockData> {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BasicBlockData {
     pub statements: Vec<Statement>,
     pub terminator: Option<Terminator>,
@@ -134,7 +135,7 @@ pub enum TerminatorKind {
     },
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Statement {
     pub span: Span,
     pub kind: StatementKind,
@@ -232,11 +233,11 @@ impl From<Lvalue> for Rvalue {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TempVal {
-    index: usize,
+    index: u64,
     size: usize,
 }
 impl TempVal {
-    pub fn value(&self) -> usize {
+    pub fn value(&self) -> u64 {
         self.index
     }
     pub fn size(&self) -> usize {
@@ -254,7 +255,7 @@ const VAR_UNINITIALIZED: usize = usize::MAX;
 pub struct Var {
     // TODO: hide behind a debug flag - we exclusively use the id from this point on
     pub ident: Identifier,
-    pub id: usize,
+    pub id: u64,
     pub size: usize,
 }
 

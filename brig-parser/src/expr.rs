@@ -88,9 +88,18 @@ impl Parser {
     }
 
     pub fn parse_primary_expression(&mut self) -> Result<Expression> {
+        // TODO: probably refactor this to be more betterer.
+        match self.peek()?.kind {
+            TokenKind::BraceOpen => {
+                let block = self.parse_block()?;
+                return Ok(Expression::Block(block));
+            }
+            TokenKind::ParenOpen => return self.parse_paren_expression(),
+            _ => {}
+        }
+
         let token = self.eat()?;
         match token.kind {
-            TokenKind::ParenOpen => self.parse_paren_expression(),
             TokenKind::Identifier(_) => Ok(Expression::Identifier(ident_from_token(token)?)),
             TokenKind::Integer(value) => Ok(Expression::Literal(Literal {
                 value: LiteralValue::Int(IntLit { value }),
@@ -102,6 +111,8 @@ impl Parser {
                 vec![
                     "ident".to_string(),
                     TokenKind::Integer(0).to_str().to_string(),
+                    TokenKind::BraceOpen.to_str().to_string(),
+                    TokenKind::ParenOpen.to_str().to_string(),
                 ],
                 token.span,
             )),
@@ -109,7 +120,7 @@ impl Parser {
     }
 
     pub fn parse_paren_expression(&mut self) -> Result<Expression> {
-        // TODO: verify that the token is actually a ParenOpen
+        verify_token!(self.eat()?, TokenKind::ParenOpen);
         let expr = self.parse_expression()?;
         verify_token!(self.eat()?, TokenKind::ParenClose);
         Ok(expr)

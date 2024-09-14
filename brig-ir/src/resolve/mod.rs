@@ -103,14 +103,8 @@ pub(crate) fn resolve_var(ir: &mut Ir, ident: Identifier, scope_index: Scope) ->
 
     for i in 0..scope.var_decls.len() {
         let var_decl = &mut scope.var_decls[i].var;
-        // if we find the symbol in this scope, assign it an ID:
-        // the ID is a 64-bit integer with the high 32 bits being the scope index
-        // and the low 32 bits being the index of the symbol in the scope
         if var_decl.ident.name == ident.name {
-            // TODO: change this to u64 to be platform-independent
-            let id = make_var_id(scope_index, i) as usize;
-            var_decl.id = id;
-            var.id = id;
+            var.id = var_decl.id;
             var.size = var_decl.size;
             return Some(var);
         }

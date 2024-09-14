@@ -1,4 +1,4 @@
-use std::{fmt::Display, process::Termination};
+use std::fmt::Display;
 
 use crate::{
     ExprOperator, Ir, Lvalue, Operand, OperandKind, Rvalue, Statement, Terminator, TerminatorKind,
