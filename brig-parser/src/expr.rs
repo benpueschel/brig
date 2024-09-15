@@ -4,7 +4,36 @@ type ExprFn = fn(&mut Parser) -> Result<Expr>;
 
 impl Parser {
     pub fn parse_expression(&mut self) -> Result<Expr> {
-        self.parse_assignment_expression()
+        match self.peek()?.kind {
+            TokenKind::If => self.parse_if_expression(),
+            _ => self.parse_assignment_expression(),
+        }
+    }
+
+    fn parse_if_expression(&mut self) -> Result<Expr> {
+        let token = self.eat()?;
+        let start = token.span;
+
+        verify_token!(token, TokenKind::If);
+        let cond = self.parse_expression()?;
+        let then_block = self.parse_block()?;
+        let mut span = Span::compose(start, then_block.span());
+
+        let else_block = if self.peek()?.kind == TokenKind::Else {
+            self.eat()?;
+            let else_block = self.parse_block()?;
+            span = Span::compose(span, else_block.span());
+            Some(else_block)
+        } else {
+            None
+        };
+
+        Ok(Expr::If(IfExpr {
+            cond: Box::new(cond),
+            then_block,
+            else_block,
+            span,
+        }))
     }
 
     fn parse_binary_expression(
@@ -299,6 +328,37 @@ mod test {
                 op: BinOp::Multiply,
                 ty_kind: None,
                 span: Span::new(1, 11),
+            }),
+        );
+    }
+
+    #[test]
+    pub fn parse_if_expr() {
+        let input = "if x { 5 } else { 10 }";
+        test_base(
+            input,
+            Expr::If(IfExpr {
+                cond: Box::new(Expr::Ident(Ident {
+                    name: Symbol::intern("x"),
+                    span: Span::new(3, 4),
+                })),
+                then_block: Block {
+                    stmts: vec![Stmt::Expr(Expr::Lit(Lit {
+                        value: LitVal::Int(IntLit { value: 5 }),
+                        ty: LitTy::Unresolved,
+                        span: Span::new(7, 8),
+                    }))],
+                    span: Span::new(5, 8),
+                },
+                else_block: Some(Block {
+                    stmts: vec![Stmt::Expr(Expr::Lit(Lit {
+                        value: LitVal::Int(IntLit { value: 10 }),
+                        ty: LitTy::Unresolved,
+                        span: Span::new(18, 20),
+                    }))],
+                    span: Span::new(16, 20),
+                }),
+                span: Span::new(0, 20),
             }),
         );
     }

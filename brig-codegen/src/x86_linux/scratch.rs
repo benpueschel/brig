@@ -175,6 +175,7 @@ impl RegisterGraph {
                 self.process_operand(rhs);
             }
             Rvalue::IntegerLit(_) => {}
+            Rvalue::Unit => {}
             Rvalue::Call(call) => {
                 for arg in &call.args {
                     self.process_operand(arg);

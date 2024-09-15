@@ -64,6 +64,7 @@ fn resolve_symbols_in_rvalue(ir: &mut Ir, rvalue: &mut Rvalue, scope: Scope) {
                 resolve_symbols_in_operand(ir, arg, scope);
             }
         }
+        Rvalue::Unit => {}
     }
 }
 fn resolve_symbols_in_lvalue(ir: &mut Ir, lvalue: &mut Lvalue, scope: Scope) {

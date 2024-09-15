@@ -212,6 +212,7 @@ pub enum Expr {
     Bin(BinExpr),
     Ident(Ident),
     Block(Block),
+    If(IfExpr),
 }
 
 impl AstNode for Expr {
@@ -222,8 +223,18 @@ impl AstNode for Expr {
             Expr::Ident(v) => v.span,
             Expr::Call(c) => c.span,
             Expr::Block(b) => b.span,
+            Expr::If(i) => i.span,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfExpr {
+    pub cond: Box<Expr>,
+    pub then_block: Block,
+    // TODO: else if
+    pub else_block: Option<Block>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]

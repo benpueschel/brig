@@ -3,5 +3,14 @@ extern fn main(): usize {
 		let b: usize = 12 + 24;
 		b + 0
 	};
-	return a;
+
+	if a > 12 {
+		a = 12;
+	} else {
+		a = 24;
+	}
+
+	let b: usize = 12;
+
+	return a + b;
 }

@@ -1,4 +1,4 @@
-use brig_ast::{BinExpr, CallExpr, Expr, Lit, LitTy, LitVal, Ty, TyKind, UintTy};
+use brig_ast::{BinExpr, CallExpr, Expr, IfExpr, Lit, LitTy, LitVal, Ty, TyKind, UintTy};
 use brig_common::Span;
 use brig_diagnostic::{Error, Result};
 
@@ -12,6 +12,8 @@ impl TypeChecker {
             Expr::Bin(ref mut e) => self.check_binary_expression(e, ty),
             Expr::Lit(ref mut lit) => self.check_literal(lit, ty),
             Expr::Call(ref mut call) => self.check_call_expression(call, ty),
+            Expr::If(if_expr) => self.check_if_expression(if_expr, ty),
+            Expr::Block(block) => self.check_block(block, ty),
             Expr::Ident(ref ident) => {
                 let ident_ty = self.get_symbol(ident.name).ok_or(Error::other(
                     format!("Could not find type for '{}'", &ident.name),
@@ -31,7 +33,6 @@ impl TypeChecker {
                     size: ident_ty.size,
                 })
             }
-            Expr::Block(block) => self.check_block(block, ty),
         }
     }
 
@@ -115,6 +116,24 @@ impl TypeChecker {
         } else {
             self.lit_default(lit)
         }
+    }
+
+    pub fn check_if_expression(&mut self, if_expr: &mut IfExpr, ty: Option<&Ty>) -> Result<Ty> {
+        // TODO: check if the condition is a bool (we don't have that ty yet)
+        let _cond_ty = self.check_expression(&mut if_expr.cond, None)?;
+
+        let then_ty = self.check_block(&mut if_expr.then_block, ty)?;
+        if let Some(ref mut else_block) = if_expr.else_block {
+            let else_ty = self.check_block(else_block, ty)?;
+            if then_ty.kind != else_ty.kind {
+                return Err(Error::type_mismatch(
+                    (then_ty.kind, then_ty.span),
+                    (else_ty.kind, else_ty.span),
+                ));
+            }
+        }
+
+        Ok(then_ty)
     }
 
     pub fn check_call_expression(&mut self, call: &mut CallExpr, _ty: Option<&Ty>) -> Result<Ty> {

@@ -16,14 +16,23 @@
 //!
 
 use std::{
-    fmt::Display,
+    fmt::{Debug, Display},
     ops::Deref,
     sync::{LazyLock, Mutex, MutexGuard},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Symbol(SymbolIndex);
 type SymbolIndex = usize;
+
+impl Debug for Symbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Symbol")
+            .field(&self.0)
+            .field(&self.to_string() as &dyn Debug)
+            .finish()
+    }
+}
 
 type Interner = Vec<String>;
 static STRINGS: LazyLock<Mutex<Interner>> = LazyLock::new(|| Mutex::new(Interner::new()));

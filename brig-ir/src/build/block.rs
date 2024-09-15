@@ -5,7 +5,12 @@ use crate::{BasicBlock, Operand, Scope, ScopeData, Terminator, TerminatorKind};
 
 pub type BlockRes = Result<(BasicBlock, Option<Operand>)>;
 impl crate::Ir {
-    pub fn traverse_block(&mut self, block: Block, parent_scope: Scope) -> BlockRes {
+    pub fn traverse_block(
+        &mut self,
+        block: Block,
+        parent_scope: Scope,
+        from: Option<BasicBlock>,
+    ) -> BlockRes {
         let scope = self.alloc_scope(ScopeData {
             temp_decls: vec![],
             var_decls: vec![],
@@ -13,7 +18,15 @@ impl crate::Ir {
             span: block.span,
         });
 
+        let from = from.unwrap_or(self.current_block_id());
         let first = self.alloc_empty_basic_block(scope);
+        if self.basic_block_data(from).terminator.is_none() {
+            self.basic_block_data_mut(from).terminator = Some(Terminator {
+                kind: TerminatorKind::Goto { target: first },
+                span: block.span,
+                scope,
+            });
+        }
         let mut operand = None;
 
         for stmt in block.stmts {
@@ -25,17 +38,6 @@ impl crate::Ir {
                 brig_ast::Stmt::Return(e) => self.traverse_return(e, scope)?,
             }
         }
-
-        if self.current_block_id() != first {
-            self.basic_block_data_mut(first).terminator = Some(Terminator {
-                span: block.span,
-                kind: TerminatorKind::Goto {
-                    target: self.current_block_id(),
-                },
-                scope,
-            });
-        }
-
         Ok((first, operand))
     }
 }

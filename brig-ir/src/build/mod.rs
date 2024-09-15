@@ -70,7 +70,7 @@ impl IrBuilder {
             ir.fn_params.push(var_id);
         }
 
-        let (first_block, _) = ir.traverse_block(body, fn_scope)?;
+        let (first_block, _) = ir.traverse_block(body, fn_scope, Some(IR_START_BLOCK))?;
 
         assert_ne!(ir.basic_blocks.len(), 0);
 
@@ -81,6 +81,7 @@ impl IrBuilder {
             span: self.decl.span,
             scope: fn_scope,
         });
+
         Ok(ir)
     }
 }

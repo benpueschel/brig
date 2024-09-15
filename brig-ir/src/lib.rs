@@ -44,6 +44,7 @@ use brig_common::{sym::Symbol, Span};
 pub mod build;
 pub mod debug;
 pub mod resolve;
+pub mod trans;
 
 pub const IR_START_BLOCK: BasicBlock = BasicBlock(0);
 pub const IR_END_BLOCK: BasicBlock = BasicBlock(1);
@@ -168,6 +169,7 @@ pub enum Rvalue {
     Temp(TempVal),
     BinaryExpr(ExprOperator, Operand, Operand),
     Call(FunctionCall),
+    Unit,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -48,7 +48,7 @@ impl Display for Ir {
             })?;
 
         for (index, block) in self.basic_blocks.iter().enumerate() {
-            writeln!(f, "    bb{index}: {{")?;
+            writeln!(f, "    bb{index}(scope {}): {{", block.scope.0)?;
             for stmt in &block.statements {
                 writeln!(f, "        {};", stmt)?;
             }
@@ -83,7 +83,7 @@ impl Display for TerminatorKind {
             TerminatorKind::Goto { target } => write!(f, "goto bb{}", target.index()),
             TerminatorKind::If { condition, targets } => write!(
                 f,
-                "[if {} goto bb{} else goto bb{}]",
+                "[if {}: goto bb{}; else goto bb{}]",
                 condition,
                 targets.0.index(),
                 targets.1.index()
@@ -99,7 +99,7 @@ impl Display for Statement {
                 write!(f, "{} = {}", lhs, rhs)
             }
             crate::StatementKind::Modify(lhs, op, rhs) => {
-                write!(f, "{} {}= {}", lhs, op, rhs)
+                write!(f, "{} = {} {} {}", lhs, lhs, op, rhs)
             }
         }
     }
@@ -109,6 +109,7 @@ impl Display for Rvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Rvalue::IntegerLit(int) => write!(f, "{}", int),
+            Rvalue::Unit => write!(f, "()"),
             Rvalue::Variable(var) => write!(f, "{}", var.ident),
             Rvalue::Temp(temp) => write!(f, "t{}", temp.index),
             Rvalue::BinaryExpr(lhs, op, rhs) => write!(f, "{} {} {}", lhs, op, rhs),

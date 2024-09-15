@@ -57,7 +57,7 @@ impl X86Linux {
                 });
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Jmp(JumpCondition::Equal),
-                    size: temp.size(),
+                    size: 0,
                     left: then_label.clone(),
                     right: Expression::None,
                 });
@@ -98,6 +98,7 @@ impl X86Linux {
                     right: Expression::None,
                 });
             }
+            Rvalue::Unit => panic!("unit rvalue in if condition"),
             Rvalue::BinaryExpr(op, lhs, rhs) => {
                 if let Some(condition) = self.get_jump_condition(op) {
                     let (size, left) = self.process_operand(rhs);
