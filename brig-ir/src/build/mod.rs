@@ -1,4 +1,4 @@
-use brig_ast::{DeclarationModifierKind, FunctionDeclaration};
+use brig_ast::{DeclModKind, FnDecl};
 use brig_diagnostic::Result;
 
 use crate::{
@@ -11,11 +11,11 @@ mod expr;
 mod stmt;
 
 pub struct IrBuilder {
-    decl: FunctionDeclaration,
+    decl: FnDecl,
 }
 
 impl IrBuilder {
-    pub fn new(decl: FunctionDeclaration) -> Self {
+    pub fn new(decl: FnDecl) -> Self {
         Self { decl }
     }
 
@@ -28,7 +28,7 @@ impl IrBuilder {
                 .decl
                 .modifiers
                 .iter()
-                .any(|m| matches!(m.kind, DeclarationModifierKind::Extern)),
+                .any(|m| matches!(m.kind, DeclModKind::Extern)),
             fn_params: vec![],
             span: self.decl.span,
         };

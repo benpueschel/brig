@@ -1,7 +1,4 @@
-use brig_ast::{
-    BinaryExpression, CallExpression, Expression, Literal, LiteralType, LiteralValue, Ty, TyKind,
-    UintType,
-};
+use brig_ast::{BinExpr, CallExpr, Expr, Lit, LitTy, LitVal, Ty, TyKind, UintTy};
 use brig_common::Span;
 use brig_diagnostic::{Error, Result};
 
@@ -10,12 +7,12 @@ use crate::TypeChecker;
 impl TypeChecker {
     /// NOTE: The `ty` field is used to coerce literals (e.g. `42` to `u32`).
     /// That's not great, but I don't care right now.
-    pub fn check_expression(&mut self, expr: &mut Expression, ty: Option<&Ty>) -> Result<Ty> {
+    pub fn check_expression(&mut self, expr: &mut Expr, ty: Option<&Ty>) -> Result<Ty> {
         match expr {
-            Expression::Binary(ref mut e) => self.check_binary_expression(e, ty),
-            Expression::Literal(ref mut lit) => self.check_literal(lit, ty),
-            Expression::Call(ref mut call) => self.check_call_expression(call, ty),
-            Expression::Identifier(ref ident) => {
+            Expr::Bin(ref mut e) => self.check_binary_expression(e, ty),
+            Expr::Lit(ref mut lit) => self.check_literal(lit, ty),
+            Expr::Call(ref mut call) => self.check_call_expression(call, ty),
+            Expr::Ident(ref ident) => {
                 let ident_ty = self.get_symbol(ident.name).ok_or(Error::other(
                     format!("Could not find type for '{}'", &ident.name),
                     ident.span,
@@ -34,48 +31,48 @@ impl TypeChecker {
                     size: ident_ty.size,
                 })
             }
-            Expression::Block(block) => self.check_block(block, ty),
+            Expr::Block(block) => self.check_block(block, ty),
         }
     }
 
-    fn lit_is_compatible_with(&self, lit: &Literal, ty: &LiteralType) -> bool {
+    fn lit_is_compatible_with(&self, lit: &Lit, ty: &LitTy) -> bool {
         match &lit.value {
-            LiteralValue::Int(int) => {
+            LitVal::Int(int) => {
                 match ty {
                     // TODO: check if int is negative, which is not allowed for uints
-                    LiteralType::Uint(uint) => match uint {
-                        UintType::U32 => int.value <= u32::MAX as usize,
-                        UintType::Usize => true, // any uint can be coerced to usize
+                    LitTy::Uint(uint) => match uint {
+                        UintTy::U32 => int.value <= u32::MAX as usize,
+                        UintTy::Usize => true, // any uint can be coerced to usize
                     },
                     // TODO: impl signed ints
                     _ => false,
                 }
             }
-            LiteralValue::Unit => matches!(ty, LiteralType::Unit),
+            LitVal::Unit => matches!(ty, LitTy::Unit),
         }
     }
 
-    fn lit_default(&self, lit: &mut Literal) -> Result<Ty> {
+    fn lit_default(&self, lit: &mut Lit) -> Result<Ty> {
         match &lit.value {
-            LiteralValue::Unit => {
-                lit.ty = LiteralType::Unit;
+            LitVal::Unit => {
+                lit.ty = LitTy::Unit;
                 Ok(Ty {
-                    kind: TyKind::Literal(LiteralType::Unit),
+                    kind: TyKind::Lit(LitTy::Unit),
                     span: lit.span,
                     size: 0,
                 })
             }
-            LiteralValue::Int(int) => {
+            LitVal::Int(int) => {
                 // TODO: check if int is negative, which would make it a signed int
 
-                let (mut size, mut ty) = (4, LiteralType::Uint(UintType::U32));
+                let (mut size, mut ty) = (4, LitTy::Uint(UintTy::U32));
                 if int.value > u32::MAX as usize {
                     size = size_of::<usize>();
-                    ty = LiteralType::Uint(UintType::Usize);
+                    ty = LitTy::Uint(UintTy::Usize);
                 }
                 lit.ty = ty;
                 Ok(Ty {
-                    kind: TyKind::Literal(ty),
+                    kind: TyKind::Lit(ty),
                     span: lit.span,
                     size,
                 })
@@ -83,10 +80,10 @@ impl TypeChecker {
         }
     }
 
-    pub fn check_literal(&self, lit: &mut Literal, ty: Option<&Ty>) -> Result<Ty> {
+    pub fn check_literal(&self, lit: &mut Lit, ty: Option<&Ty>) -> Result<Ty> {
         if let Some(ty) = ty {
             match &ty.kind {
-                TyKind::Literal(lit_ty) => {
+                TyKind::Lit(lit_ty) => {
                     if self.lit_is_compatible_with(lit, lit_ty) {
                         let new_ty = Ty {
                             kind: ty.kind.clone(),
@@ -109,7 +106,7 @@ impl TypeChecker {
                         (u_ty.name.to_string(), u_ty.span),
                     ))
                 }
-                TyKind::Function(fn_ty) => Err(Error::type_mismatch(
+                TyKind::Fn(fn_ty) => Err(Error::type_mismatch(
                     (ty.kind.to_string(), ty.span),
                     (fn_ty.name.to_string(), lit.span),
                 )),
@@ -120,18 +117,14 @@ impl TypeChecker {
         }
     }
 
-    pub fn check_call_expression(
-        &mut self,
-        call: &mut CallExpression,
-        _ty: Option<&Ty>,
-    ) -> Result<Ty> {
+    pub fn check_call_expression(&mut self, call: &mut CallExpr, _ty: Option<&Ty>) -> Result<Ty> {
         let call_def = self.get_symbol(call.callee.name).ok_or(Error::other(
             format!("Could not find function '{}'", &call.callee),
             call.span,
         ))?;
 
         let fn_ty = match &call_def.kind {
-            TyKind::Function(fn_ty) => fn_ty.clone(),
+            TyKind::Fn(fn_ty) => fn_ty.clone(),
             _ => {
                 return Err(Error::other(
                     format!("'{}' is not a function", &call.callee),
@@ -162,11 +155,7 @@ impl TypeChecker {
         Ok(*fn_ty.ret)
     }
 
-    pub fn check_binary_expression(
-        &mut self,
-        expr: &mut BinaryExpression,
-        ty: Option<&Ty>,
-    ) -> Result<Ty> {
+    pub fn check_binary_expression(&mut self, expr: &mut BinExpr, ty: Option<&Ty>) -> Result<Ty> {
         let lhs = self.check_expression(&mut expr.lhs, ty)?;
         let rhs = self.check_expression(&mut expr.rhs, Some(&lhs))?;
         let span = Span::compose(lhs.span, rhs.span);
@@ -194,19 +183,19 @@ mod test {
     #[test]
     fn check_usize_declaration() {
         // let x: usize = 42;
-        let mut decl = VariableDeclaration {
-            name: Identifier {
+        let mut decl = LetDecl {
+            name: Ident {
                 name: Symbol::intern("x"),
                 span: Span::new(4, 5),
             },
             ty: Ty {
-                kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
+                kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                 size: 8,
                 span: Span::new(7, 12),
             },
-            expr: Some(Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 42 }),
-                ty: LiteralType::Unresolved,
+            expr: Some(Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 42 }),
+                ty: LitTy::Unresolved,
                 span: Span::new(15, 17),
             })),
             span: Span::new(0, 17),
@@ -215,15 +204,12 @@ mod test {
         tc.check_variable_declaration(&mut decl)
             .expect("type check failed");
 
-        assert_eq!(
-            decl.ty.kind,
-            TyKind::Literal(LiteralType::Uint(UintType::Usize))
-        );
+        assert_eq!(decl.ty.kind, TyKind::Lit(LitTy::Uint(UintTy::Usize)));
         assert_eq!(
             decl.expr,
-            Some(Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 42 }),
-                ty: LiteralType::Uint(UintType::Usize),
+            Some(Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 42 }),
+                ty: LitTy::Uint(UintTy::Usize),
                 span: Span::new(15, 17),
             }))
         );
@@ -232,19 +218,19 @@ mod test {
     #[test]
     fn check_u32_declaration() {
         // let x: u32 = 42;
-        let mut decl = VariableDeclaration {
-            name: Identifier {
+        let mut decl = LetDecl {
+            name: Ident {
                 name: Symbol::intern("x"),
                 span: Span::new(4, 5),
             },
             ty: Ty {
-                kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                 size: 4,
                 span: Span::new(7, 9),
             },
-            expr: Some(Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 42 }),
-                ty: LiteralType::Unresolved,
+            expr: Some(Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 42 }),
+                ty: LitTy::Unresolved,
                 span: Span::new(13, 15),
             })),
             span: Span::new(0, 15),
@@ -253,15 +239,12 @@ mod test {
         tc.check_variable_declaration(&mut decl)
             .expect("type check failed");
 
-        assert_eq!(
-            decl.ty.kind,
-            TyKind::Literal(LiteralType::Uint(UintType::U32))
-        );
+        assert_eq!(decl.ty.kind, TyKind::Lit(LitTy::Uint(UintTy::U32)));
         assert_eq!(
             decl.expr,
-            Some(Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 42 }),
-                ty: LiteralType::Uint(UintType::U32),
+            Some(Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 42 }),
+                ty: LitTy::Uint(UintTy::U32),
                 span: Span::new(13, 15),
             }))
         );
@@ -270,67 +253,61 @@ mod test {
     #[test]
     fn check_simple_binary_expression_types() {
         // 1 + 2
-        let mut expr = BinaryExpression {
-            lhs: Box::new(Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 1 }),
-                ty: LiteralType::Unresolved,
+        let mut expr = BinExpr {
+            lhs: Box::new(Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 1 }),
+                ty: LitTy::Unresolved,
                 span: Span::new(0, 1),
             })),
-            rhs: Box::new(Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 2 }),
-                ty: LiteralType::Unresolved,
+            rhs: Box::new(Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 2 }),
+                ty: LitTy::Unresolved,
                 span: Span::new(4, 5),
             })),
             ty_kind: None,
-            op: BinaryOperator::Add,
+            op: BinOp::Add,
             span: Span::new(0, 5),
         };
 
         let ty = TypeChecker::default()
             .check_binary_expression(&mut expr, None)
             .unwrap();
-        assert_eq!(ty.kind, TyKind::Literal(LiteralType::Uint(UintType::U32)));
-        assert_eq!(
-            expr.ty_kind,
-            Some(TyKind::Literal(LiteralType::Uint(UintType::U32)))
-        );
+        assert_eq!(ty.kind, TyKind::Lit(LitTy::Uint(UintTy::U32)));
+        assert_eq!(expr.ty_kind, Some(TyKind::Lit(LitTy::Uint(UintTy::U32))));
     }
     #[test]
     fn check_binary_expression_types() {
         // 1 + 2 * 3
-        let mut expr = BinaryExpression {
-            lhs: Box::new(Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 1 }),
-                ty: LiteralType::Unresolved,
+        let mut expr = BinExpr {
+            lhs: Box::new(Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 1 }),
+                ty: LitTy::Unresolved,
                 span: Span::new(0, 1),
             })),
-            rhs: Box::new(Expression::Binary(BinaryExpression {
-                lhs: Box::new(Expression::Literal(Literal {
-                    value: LiteralValue::Int(IntLit { value: 2 }),
-                    ty: LiteralType::Unresolved,
+            rhs: Box::new(Expr::Bin(BinExpr {
+                lhs: Box::new(Expr::Lit(Lit {
+                    value: LitVal::Int(IntLit { value: 2 }),
+                    ty: LitTy::Unresolved,
                     span: Span::new(4, 5),
                 })),
-                rhs: Box::new(Expression::Literal(Literal {
-                    value: LiteralValue::Int(IntLit { value: 3 }),
-                    ty: LiteralType::Unresolved,
+                rhs: Box::new(Expr::Lit(Lit {
+                    value: LitVal::Int(IntLit { value: 3 }),
+                    ty: LitTy::Unresolved,
                     span: Span::new(8, 9),
                 })),
                 ty_kind: None,
-                op: BinaryOperator::Multiply,
+                op: BinOp::Multiply,
                 span: Span::new(4, 9),
             })),
             ty_kind: None,
-            op: BinaryOperator::Add,
+            op: BinOp::Add,
             span: Span::new(0, 9),
         };
 
         let ty = TypeChecker::default()
             .check_binary_expression(&mut expr, None)
             .unwrap();
-        assert_eq!(ty.kind, TyKind::Literal(LiteralType::Uint(UintType::U32)));
-        assert_eq!(
-            expr.ty_kind,
-            Some(TyKind::Literal(LiteralType::Uint(UintType::U32)))
-        );
+        assert_eq!(ty.kind, TyKind::Lit(LitTy::Uint(UintTy::U32)));
+        assert_eq!(expr.ty_kind, Some(TyKind::Lit(LitTy::Uint(UintTy::U32))));
     }
 }

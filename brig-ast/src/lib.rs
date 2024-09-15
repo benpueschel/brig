@@ -10,7 +10,7 @@ pub trait AstNode {
 /// A program is a list of top-level declarations in a file.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Program {
-    pub declarations: Vec<Declaration>,
+    pub declarations: Vec<Decl>,
     pub span: Span,
 }
 
@@ -22,12 +22,12 @@ impl AstNode for Program {
 
 /// A top-level declaration.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Declaration {
+pub struct Decl {
     /// The kind of declaration.
-    pub kind: DeclarationKind,
+    pub kind: DeclKind,
 }
 
-impl AstNode for Declaration {
+impl AstNode for Decl {
     fn span(&self) -> Span {
         self.kind.span()
     }
@@ -35,27 +35,27 @@ impl AstNode for Declaration {
 
 /// A top-level declaration kind.
 #[derive(Debug, Clone, PartialEq)]
-pub enum DeclarationKind {
-    Function(FunctionDeclaration),
+pub enum DeclKind {
+    Fn(FnDecl),
 }
 
-impl AstNode for DeclarationKind {
+impl AstNode for DeclKind {
     fn span(&self) -> Span {
         match self {
-            DeclarationKind::Function(f) => f.span,
+            DeclKind::Fn(f) => f.span,
         }
     }
 }
 
 /// A function declaration.
 #[derive(Debug, Clone, PartialEq)]
-pub struct FunctionDeclaration {
+pub struct FnDecl {
     /// The name of the function.
-    pub name: Identifier,
+    pub name: Ident,
     /// The modifiers of the declaration (e.g. `extern`).
-    pub modifiers: Vec<DeclarationModifier>,
+    pub modifiers: Vec<DeclMod>,
     /// The parameters of the function.
-    pub parameters: Punctuated<Parameter>,
+    pub parameters: Punctuated<Param>,
     /// The return type of the function.
     pub return_ty: Ty,
     /// The body of the function.
@@ -110,28 +110,28 @@ impl<T> IntoIterator for Punctuated<T> {
     }
 }
 
-impl AstNode for FunctionDeclaration {
+impl AstNode for FnDecl {
     fn span(&self) -> Span {
         self.span
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DeclarationModifier {
+pub struct DeclMod {
     /// The kind of function modifier.
-    pub kind: DeclarationModifierKind,
+    pub kind: DeclModKind,
     /// The span of the function modifier.
     pub span: Span,
 }
 
-impl AstNode for DeclarationModifier {
+impl AstNode for DeclMod {
     fn span(&self) -> Span {
         self.span
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DeclarationModifierKind {
+pub enum DeclModKind {
     /// An `extern` function. This makes the function globally available to the linker.
     /// Extern functions are used to interface with other languages or libraries.
     Extern,
@@ -141,7 +141,7 @@ pub enum DeclarationModifierKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     /// The statements in the block.
-    pub statements: Vec<Statement>,
+    pub stmts: Vec<Stmt>,
     /// The span of the block.
     pub span: Span,
 }
@@ -153,104 +153,104 @@ impl AstNode for Block {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement {
-    Expr(Expression),
-    Semi(Expression),
-    VariableDeclaration(VariableDeclaration),
-    Return(ReturnStatement),
+pub enum Stmt {
+    Expr(Expr),
+    Semi(Expr),
+    LetDecl(LetDecl),
+    Return(ReturnStmt),
     None,
 }
 
-impl AstNode for Statement {
+impl AstNode for Stmt {
     fn span(&self) -> Span {
         match self {
-            Statement::Expr(e) => e.span(),
-            Statement::Semi(e) => e.span(),
-            Statement::VariableDeclaration(v) => v.span(),
-            Statement::Return(e) => e.span(),
-            Statement::None => Span::default(),
+            Stmt::Expr(e) => e.span(),
+            Stmt::Semi(e) => e.span(),
+            Stmt::LetDecl(v) => v.span(),
+            Stmt::Return(e) => e.span(),
+            Stmt::None => Span::default(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ReturnStatement {
+pub struct ReturnStmt {
     /// The expression to return.
-    pub expr: Expression,
+    pub expr: Expr,
     /// The span of the return statement.
     pub span: Span,
 }
 
-impl AstNode for ReturnStatement {
+impl AstNode for ReturnStmt {
     fn span(&self) -> Span {
         self.span
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct VariableDeclaration {
+pub struct LetDecl {
     /// The name of the variable.
-    pub name: Identifier,
+    pub name: Ident,
     /// The type of the variable.
     pub ty: Ty,
     /// The expression that initializes the variable.
-    pub expr: Option<Expression>,
+    pub expr: Option<Expr>,
     /// The span of the variable declaration.
     pub span: Span,
 }
 
-impl AstNode for VariableDeclaration {
+impl AstNode for LetDecl {
     fn span(&self) -> Span {
         self.span
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expression {
-    Call(CallExpression),
-    Literal(Literal),
-    Binary(BinaryExpression),
-    Identifier(Identifier),
+pub enum Expr {
+    Call(CallExpr),
+    Lit(Lit),
+    Bin(BinExpr),
+    Ident(Ident),
     Block(Block),
 }
 
-impl AstNode for Expression {
+impl AstNode for Expr {
     fn span(&self) -> Span {
         match self {
-            Expression::Literal(l) => l.span,
-            Expression::Binary(b) => b.span,
-            Expression::Identifier(v) => v.span,
-            Expression::Call(c) => c.span,
-            Expression::Block(b) => b.span,
+            Expr::Lit(l) => l.span,
+            Expr::Bin(b) => b.span,
+            Expr::Ident(v) => v.span,
+            Expr::Call(c) => c.span,
+            Expr::Block(b) => b.span,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CallExpression {
-    pub callee: Identifier,
-    pub args: Punctuated<Expression>,
+pub struct CallExpr {
+    pub callee: Ident,
+    pub args: Punctuated<Expr>,
     pub fn_ty: Option<FnTy>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BinaryExpression {
-    pub lhs: Box<Expression>,
-    pub rhs: Box<Expression>,
-    pub op: BinaryOperator,
+pub struct BinExpr {
+    pub lhs: Box<Expr>,
+    pub rhs: Box<Expr>,
+    pub op: BinOp,
     pub span: Span,
     pub ty_kind: Option<TyKind>,
 }
 
-impl AstNode for BinaryExpression {
+impl AstNode for BinExpr {
     fn span(&self) -> Span {
         self.span
     }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum BinaryOperator {
+pub enum BinOp {
     Add,
     Subtract,
     Multiply,
@@ -261,23 +261,23 @@ pub enum BinaryOperator {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Literal {
+pub struct Lit {
     /// The value of the literal.
-    pub value: LiteralValue,
+    pub value: LitVal,
     /// The type of the literal.
-    pub ty: LiteralType,
+    pub ty: LitTy,
     /// The span of the literal.
     pub span: Span,
 }
 
-impl AstNode for Literal {
+impl AstNode for Lit {
     fn span(&self) -> Span {
         self.span
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum LiteralValue {
+pub enum LitVal {
     Int(IntLit),
     Unit,
 }
@@ -289,36 +289,36 @@ pub struct IntLit {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Parameter {
+pub struct Param {
     /// The name of the parameter.
-    pub ident: Identifier,
+    pub ident: Ident,
     /// The type of the parameter.
     pub ty: Ty,
     /// The span of the parameter.
     pub span: Span,
 }
 
-impl AstNode for Parameter {
+impl AstNode for Param {
     fn span(&self) -> Span {
         self.span
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Identifier {
+pub struct Ident {
     /// The name of the identifier.
     pub name: Symbol,
     /// The span of the identifier.
     pub span: Span,
 }
 
-impl Display for Identifier {
+impl Display for Ident {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", *self.name.as_str())
     }
 }
 
-impl AstNode for Identifier {
+impl AstNode for Ident {
     fn span(&self) -> Span {
         self.span
     }
@@ -340,11 +340,11 @@ impl AstNode for Ty {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TyKind {
     /// A literal type, like a u32.
-    Literal(LiteralType),
+    Lit(LitTy),
     /// A user-defined type.
-    UserDefined(Identifier),
+    UserDefined(Ident),
     /// A function type.
-    Function(FnTy),
+    Fn(FnTy),
     /// A type the user didn't specify.
     Unspecified,
 }
@@ -366,7 +366,7 @@ pub struct Field {
 impl Display for TyKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TyKind::Function(func) => {
+            TyKind::Fn(func) => {
                 write!(f, "fn {}(", *func.name.as_str())?;
                 for (i, arg) in func.args.iter().enumerate() {
                     if i > 0 {
@@ -376,7 +376,7 @@ impl Display for TyKind {
                 }
                 write!(f, "): {}", func.ret.kind)
             }
-            TyKind::Literal(l) => write!(f, "{}", l),
+            TyKind::Lit(l) => write!(f, "{}", l),
             TyKind::UserDefined(ident) => write!(f, "{}", *ident.name.as_str()),
             TyKind::Unspecified => write!(f, "unspecified"),
         }
@@ -384,49 +384,49 @@ impl Display for TyKind {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum LiteralType {
+pub enum LitTy {
     /// Various unsigned integer types, like `u32`.
-    Uint(UintType),
+    Uint(UintTy),
     /// The unit type. Equivalent to `void` in C-like languages.
     Unit,
     /// A type that has not been resolved yet.
     Unresolved,
 }
 
-impl LiteralType {
+impl LitTy {
     pub fn size(&self) -> usize {
         match self {
-            LiteralType::Uint(UintType::U32) => 4,
-            LiteralType::Uint(UintType::Usize) => std::mem::size_of::<usize>(),
-            LiteralType::Unit => 0,
-            LiteralType::Unresolved => usize::MAX,
+            LitTy::Uint(UintTy::U32) => 4,
+            LitTy::Uint(UintTy::Usize) => std::mem::size_of::<usize>(),
+            LitTy::Unit => 0,
+            LitTy::Unresolved => usize::MAX,
         }
     }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum UintType {
+pub enum UintTy {
     /// A 32-bit unsigned integer.
     U32,
     /// An unsigned integer the size of a pointer for the target architecture.
     Usize,
 }
 
-impl Display for UintType {
+impl Display for UintTy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            UintType::U32 => write!(f, "u32"),
-            UintType::Usize => write!(f, "usize"),
+            UintTy::U32 => write!(f, "u32"),
+            UintTy::Usize => write!(f, "usize"),
         }
     }
 }
 
-impl Display for LiteralType {
+impl Display for LitTy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LiteralType::Uint(uint) => write!(f, "{}", uint),
-            LiteralType::Unit => write!(f, "()"),
-            LiteralType::Unresolved => write!(f, "unresolved"),
+            LitTy::Uint(uint) => write!(f, "{}", uint),
+            LitTy::Unit => write!(f, "()"),
+            LitTy::Unresolved => write!(f, "unresolved"),
         }
     }
 }

@@ -1,6 +1,6 @@
 //! This module is responsible for resoving types and symbols in the IR
 
-use brig_ast::Identifier;
+use brig_ast::Ident;
 
 use crate::{
     BasicBlock, Ir, Lvalue, Operand, OperandKind, Rvalue, Scope, Statement, StatementKind,
@@ -93,7 +93,7 @@ pub(crate) fn make_var_id(scope_index: Scope, var_index: usize) -> u64 {
     (scope_index.0 as u64) << 32 | var_index as u64
 }
 
-pub(crate) fn resolve_var(ir: &mut Ir, ident: Identifier, scope_index: Scope) -> Option<Var> {
+pub(crate) fn resolve_var(ir: &mut Ir, ident: Ident, scope_index: Scope) -> Option<Var> {
     let scope = ir.scope_data_mut(scope_index);
     let mut var = Var {
         id: 0,

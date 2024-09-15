@@ -38,7 +38,7 @@
 
 use std::ops::{Index, IndexMut};
 
-use brig_ast::{BinaryOperator, Identifier};
+use brig_ast::{BinOp, Ident};
 use brig_common::{sym::Symbol, Span};
 
 pub mod build;
@@ -183,16 +183,16 @@ pub enum ExprOperator {
     Lte,
 }
 
-impl From<BinaryOperator> for ExprOperator {
-    fn from(value: BinaryOperator) -> Self {
+impl From<BinOp> for ExprOperator {
+    fn from(value: BinOp) -> Self {
         match value {
-            BinaryOperator::Add => ExprOperator::Add,
-            BinaryOperator::Subtract => ExprOperator::Sub,
-            BinaryOperator::Multiply => ExprOperator::Mul,
-            BinaryOperator::Divide => ExprOperator::Div,
-            BinaryOperator::Assign => panic!("assign operator is not a valid expression operator"),
-            BinaryOperator::LessThan => ExprOperator::Lt,
-            BinaryOperator::GreaterThan => ExprOperator::Gt,
+            BinOp::Add => ExprOperator::Add,
+            BinOp::Subtract => ExprOperator::Sub,
+            BinOp::Multiply => ExprOperator::Mul,
+            BinOp::Divide => ExprOperator::Div,
+            BinOp::Assign => panic!("assign operator is not a valid expression operator"),
+            BinOp::LessThan => ExprOperator::Lt,
+            BinOp::GreaterThan => ExprOperator::Gt,
         }
     }
 }
@@ -253,7 +253,7 @@ pub struct TempDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Var {
     // TODO: hide behind a debug flag - we exclusively use the id from this point on
-    pub ident: Identifier,
+    pub ident: Ident,
     pub id: u64,
     pub size: usize,
 }

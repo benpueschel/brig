@@ -1,18 +1,18 @@
-use brig_ast::{Declaration, DeclarationKind, FnTy, FunctionDeclaration, Ty, TyKind};
+use brig_ast::{Decl, DeclKind, FnTy, FnDecl, Ty, TyKind};
 use brig_diagnostic::Result;
 
 use crate::TypeChecker;
 
 impl TypeChecker {
-    pub fn check_declaration(&mut self, decl: &mut Declaration) -> Result<()> {
+    pub fn check_declaration(&mut self, decl: &mut Decl) -> Result<()> {
         // TODO: resolve global declarations
         match decl.kind {
-            DeclarationKind::Function(ref mut f) => self.check_function_declaration(f),
+            DeclKind::Fn(ref mut f) => self.check_function_declaration(f),
         }
     }
 
-    pub fn check_function_declaration(&mut self, decl: &mut FunctionDeclaration) -> Result<()> {
-        let kind = TyKind::Function(FnTy {
+    pub fn check_function_declaration(&mut self, decl: &mut FnDecl) -> Result<()> {
+        let kind = TyKind::Fn(FnTy {
             name: decl.name.name,
             span: decl.span,
             args: decl.parameters.iter().map(|p| p.ty.clone()).collect(),

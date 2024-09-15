@@ -16,13 +16,13 @@ impl crate::Ir {
         let first = self.alloc_empty_basic_block(scope);
         let mut operand = None;
 
-        for stmt in block.statements {
+        for stmt in block.stmts {
             operand = match stmt {
-                brig_ast::Statement::Expr(e) => self.traverse_expr(e, scope)?,
-                brig_ast::Statement::Semi(e) => self.traverse_expr_stmt(e, scope)?,
-                brig_ast::Statement::VariableDeclaration(d) => self.traverse_var_decl(d, scope)?,
-                brig_ast::Statement::None => operand,
-                brig_ast::Statement::Return(e) => self.traverse_return(e, scope)?,
+                brig_ast::Stmt::Expr(e) => self.traverse_expr(e, scope)?,
+                brig_ast::Stmt::Semi(e) => self.traverse_expr_stmt(e, scope)?,
+                brig_ast::Stmt::LetDecl(d) => self.traverse_var_decl(d, scope)?,
+                brig_ast::Stmt::None => operand,
+                brig_ast::Stmt::Return(e) => self.traverse_return(e, scope)?,
             }
         }
 

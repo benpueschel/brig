@@ -1,5 +1,5 @@
 use ariadne::Source;
-use brig_ast::DeclarationKind;
+use brig_ast::DeclKind;
 use brig_codegen::CodeGenerator;
 use brig_ir::build::IrBuilder;
 use brig_lexer::Lexer;
@@ -51,7 +51,7 @@ fn main() {
     for decl in program.declarations {
         // TODO: other kinds of declarations
         #[allow(irrefutable_let_patterns)]
-        if let DeclarationKind::Function(func) = decl.kind {
+        if let DeclKind::Fn(func) = decl.kind {
             let mut ir = IrBuilder::new(func)
                 .build()
                 .map_err(|err| report_error(err, &input))

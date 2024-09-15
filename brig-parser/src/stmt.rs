@@ -1,7 +1,7 @@
 use crate::*;
 
 impl Parser {
-    pub fn parse_statement(&mut self) -> Result<Statement> {
+    pub fn parse_statement(&mut self) -> Result<Stmt> {
         let token = self.peek()?;
         match token.kind {
             // TODO: if statement
@@ -11,19 +11,19 @@ impl Parser {
         }
     }
 
-    pub fn parse_expression_statement(&mut self) -> Result<Statement> {
+    pub fn parse_expression_statement(&mut self) -> Result<Stmt> {
         let expr = self.parse_expression()?;
         match self.peek()?.kind {
             TokenKind::Semicolon => {
                 // TODO: include semicolon in span
                 self.eat()?;
-                Ok(Statement::Semi(expr))
+                Ok(Stmt::Semi(expr))
             }
-            _ => Ok(Statement::Expr(expr)),
+            _ => Ok(Stmt::Expr(expr)),
         }
     }
 
-    pub fn parse_variable_declaration(&mut self) -> Result<Statement> {
+    pub fn parse_variable_declaration(&mut self) -> Result<Stmt> {
         // let [name] <: [type]> = [expr];
         let token = self.eat()?;
         let start = token.span;
@@ -33,7 +33,7 @@ impl Parser {
         let ty = self.parse_type()?;
         let token = self.eat()?;
         if let TokenKind::Semicolon = token.kind {
-            return Ok(Statement::VariableDeclaration(VariableDeclaration {
+            return Ok(Stmt::LetDecl(LetDecl {
                 name,
                 ty,
                 expr: None,
@@ -44,7 +44,7 @@ impl Parser {
         let expr = self.parse_expression()?;
         verify_token!(self.eat()?, TokenKind::Semicolon);
         let span = Span::compose(start, expr.span());
-        Ok(Statement::VariableDeclaration(VariableDeclaration {
+        Ok(Stmt::LetDecl(LetDecl {
             name,
             ty,
             expr: Some(expr),
@@ -52,7 +52,7 @@ impl Parser {
         }))
     }
 
-    pub fn parse_return_statement(&mut self) -> Result<Statement> {
+    pub fn parse_return_statement(&mut self) -> Result<Stmt> {
         // return [expr];
         let token = self.eat()?;
         let start = token.span;
@@ -61,10 +61,10 @@ impl Parser {
 
         if let TokenKind::Semicolon = self.peek()?.kind {
             let span = Span::compose(start, self.peek()?.span);
-            return Ok(Statement::Return(ReturnStatement {
-                expr: Expression::Literal(Literal {
-                    value: LiteralValue::Unit,
-                    ty: LiteralType::Unit,
+            return Ok(Stmt::Return(ReturnStmt {
+                expr: Expr::Lit(Lit {
+                    value: LitVal::Unit,
+                    ty: LitTy::Unit,
                     span,
                 }),
                 span,
@@ -75,7 +75,7 @@ impl Parser {
         verify_token!(self.eat()?, TokenKind::Semicolon);
 
         let span = Span::compose(start, expr.span());
-        Ok(Statement::Return(ReturnStatement { expr, span }))
+        Ok(Stmt::Return(ReturnStmt { expr, span }))
     }
 }
 
@@ -93,8 +93,8 @@ mod test {
         let statement = parser.parse_statement().expect("Failed to parse statement");
         assert_eq!(
             statement,
-            Statement::Return(ReturnStatement {
-                expr: Expression::Identifier(Identifier {
+            Stmt::Return(ReturnStmt {
+                expr: Expr::Ident(Ident {
                     name: Symbol::intern("var"),
                     span: Span::new(7, 10),
                 }),
@@ -111,19 +111,19 @@ mod test {
         let statement = parser.parse_statement().expect("Failed to parse statement");
         assert_eq!(
             statement,
-            Statement::VariableDeclaration(VariableDeclaration {
-                name: Identifier {
+            Stmt::LetDecl(LetDecl {
+                name: Ident {
                     name: Symbol::intern("var"),
                     span: Span::new(4, 7),
                 },
                 ty: Ty {
-                    kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
+                    kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                     span: Span::new(9, 14),
                     size: 8,
                 },
-                expr: Some(Expression::Literal(Literal {
-                    value: LiteralValue::Int(IntLit { value: 5 }),
-                    ty: LiteralType::Unresolved,
+                expr: Some(Expr::Lit(Lit {
+                    value: LitVal::Int(IntLit { value: 5 }),
+                    ty: LitTy::Unresolved,
                     span: Span::new(17, 18),
                 })),
                 span: Span::new(0, 18),
@@ -139,8 +139,8 @@ mod test {
         let statement = parser.parse_statement().expect("Failed to parse statement");
         assert_eq!(
             statement,
-            Statement::VariableDeclaration(VariableDeclaration {
-                name: Identifier {
+            Stmt::LetDecl(LetDecl {
+                name: Ident {
                     name: Symbol::intern("var"),
                     span: Span::new(4, 7),
                 },
@@ -149,9 +149,9 @@ mod test {
                     span: Span::new(8, 8),
                     size: 0,
                 },
-                expr: Some(Expression::Literal(Literal {
-                    value: LiteralValue::Int(IntLit { value: 5 }),
-                    ty: LiteralType::Unresolved,
+                expr: Some(Expr::Lit(Lit {
+                    value: LitVal::Int(IntLit { value: 5 }),
+                    ty: LitTy::Unresolved,
                     span: Span::new(10, 11),
                 })),
                 span: Span::new(0, 11),
@@ -167,10 +167,10 @@ mod test {
         let statement = parser.parse_statement().expect("Failed to parse statement");
         assert_eq!(
             statement,
-            Statement::Return(ReturnStatement {
-                expr: Expression::Literal(Literal {
-                    value: LiteralValue::Int(IntLit { value: 5 }),
-                    ty: LiteralType::Unresolved,
+            Stmt::Return(ReturnStmt {
+                expr: Expr::Lit(Lit {
+                    value: LitVal::Int(IntLit { value: 5 }),
+                    ty: LitTy::Unresolved,
                     span: Span::new(7, 8),
                 }),
                 span: Span::new(0, 8),

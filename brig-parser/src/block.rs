@@ -18,15 +18,15 @@ impl Parser {
             statements.last().map(|s| s.span()).unwrap_or_default(),
         );
 
-        Ok(Block { span, statements })
+        Ok(Block { span, stmts: statements })
     }
 }
 
 #[cfg(test)]
 mod test {
     use brig_ast::{
-        AstNode, BinaryExpression, BinaryOperator, Block, Expression, Identifier, IntLit, Literal,
-        LiteralType, LiteralValue, Statement, Ty, TyKind, UintType, VariableDeclaration,
+        AstNode, BinExpr, BinOp, Block, Expr, Ident, IntLit, Lit,
+        LitTy, LitVal, Stmt, Ty, TyKind, UintTy, LetDecl,
     };
     use brig_common::{sym::Symbol, Span};
     use brig_lexer::Lexer;
@@ -43,20 +43,20 @@ mod test {
         assert_eq!(stmt.span(), Span::with_len(0, 15));
         assert_eq!(
             stmt,
-            Statement::VariableDeclaration(VariableDeclaration {
-                name: Identifier {
+            Stmt::LetDecl(LetDecl {
+                name: Ident {
                     name: Symbol::intern("x"),
                     span: Span::with_len(4, 1),
                 },
                 ty: Ty {
-                    kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
+                    kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                     size: 8,
                     span: Span::with_len(6, 5),
                 },
-                expr: Some(Expression::Block(Block {
-                    statements: vec![Statement::Expr(Expression::Literal(Literal {
-                        value: LiteralValue::Int(IntLit { value: 42 }),
-                        ty: LiteralType::Unresolved,
+                expr: Some(Expr::Block(Block {
+                    stmts: vec![Stmt::Expr(Expr::Lit(Lit {
+                        value: LitVal::Int(IntLit { value: 42 }),
+                        ty: LitTy::Unresolved,
                         span: Span::with_len(13, 2),
                     }))],
                     span: Span::with_len(12, 3),
@@ -73,40 +73,40 @@ mod test {
         let mut parser = Parser::new(lexer);
         let block = parser.parse_block().expect("failed to parse block");
 
-        assert_eq!(block.statements.len(), 2);
+        assert_eq!(block.stmts.len(), 2);
         assert_eq!(block.span, Span::with_len(0, 17));
         assert_eq!(
             block,
             Block {
-                statements: vec![
-                    Statement::VariableDeclaration(VariableDeclaration {
-                        name: Identifier {
+                stmts: vec![
+                    Stmt::LetDecl(LetDecl {
+                        name: Ident {
                             name: Symbol::intern("x"),
                             span: Span::with_len(5, 1),
                         },
                         ty: Ty {
-                            kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                            kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                             size: 4,
                             span: Span::with_len(7, 3),
                         },
-                        expr: Some(Expression::Literal(Literal {
-                            value: LiteralValue::Int(IntLit { value: 42 }),
-                            ty: LiteralType::Unresolved,
+                        expr: Some(Expr::Lit(Lit {
+                            value: LitVal::Int(IntLit { value: 42 }),
+                            ty: LitTy::Unresolved,
                             span: Span::with_len(11, 2),
                         })),
                         span: Span::with_len(1, 12),
                     }),
-                    Statement::Expr(Expression::Binary(BinaryExpression {
-                        lhs: Box::new(Expression::Identifier(Identifier {
+                    Stmt::Expr(Expr::Bin(BinExpr {
+                        lhs: Box::new(Expr::Ident(Ident {
                             name: Symbol::intern("x"),
                             span: Span::with_len(14, 1),
                         })),
-                        rhs: Box::new(Expression::Literal(Literal {
-                            value: LiteralValue::Int(IntLit { value: 1 }),
-                            ty: LiteralType::Unresolved,
+                        rhs: Box::new(Expr::Lit(Lit {
+                            value: LitVal::Int(IntLit { value: 1 }),
+                            ty: LitTy::Unresolved,
                             span: Span::with_len(16, 1),
                         })),
-                        op: BinaryOperator::Add,
+                        op: BinOp::Add,
                         span: Span::with_len(14, 3),
                         ty_kind: None,
                     })),
@@ -123,40 +123,40 @@ mod test {
         let mut parser = Parser::new(lexer);
         let block = parser.parse_block().expect("failed to parse block");
 
-        assert_eq!(block.statements.len(), 2);
+        assert_eq!(block.stmts.len(), 2);
         assert_eq!(block.span, Span::with_len(0, 17));
         assert_eq!(
             block,
             Block {
-                statements: vec![
-                    Statement::VariableDeclaration(VariableDeclaration {
-                        name: Identifier {
+                stmts: vec![
+                    Stmt::LetDecl(LetDecl {
+                        name: Ident {
                             name: Symbol::intern("x"),
                             span: Span::with_len(5, 1),
                         },
                         ty: Ty {
-                            kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                            kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                             size: 4,
                             span: Span::with_len(7, 3),
                         },
-                        expr: Some(Expression::Literal(Literal {
-                            value: LiteralValue::Int(IntLit { value: 42 }),
-                            ty: LiteralType::Unresolved,
+                        expr: Some(Expr::Lit(Lit {
+                            value: LitVal::Int(IntLit { value: 42 }),
+                            ty: LitTy::Unresolved,
                             span: Span::with_len(11, 2),
                         })),
                         span: Span::with_len(1, 12),
                     }),
-                    Statement::Semi(Expression::Binary(BinaryExpression {
-                        lhs: Box::new(Expression::Identifier(Identifier {
+                    Stmt::Semi(Expr::Bin(BinExpr {
+                        lhs: Box::new(Expr::Ident(Ident {
                             name: Symbol::intern("x"),
                             span: Span::with_len(14, 1),
                         })),
-                        rhs: Box::new(Expression::Literal(Literal {
-                            value: LiteralValue::Int(IntLit { value: 1 }),
-                            ty: LiteralType::Unresolved,
+                        rhs: Box::new(Expr::Lit(Lit {
+                            value: LitVal::Int(IntLit { value: 1 }),
+                            ty: LitTy::Unresolved,
                             span: Span::with_len(16, 1),
                         })),
-                        op: BinaryOperator::Add,
+                        op: BinOp::Add,
                         span: Span::with_len(14, 3),
                         ty_kind: None,
                     })),

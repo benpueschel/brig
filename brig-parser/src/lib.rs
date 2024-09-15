@@ -23,9 +23,9 @@ pub fn expected_ident(token: &Token) -> Error {
 }
 
 /// A helper function parsing an identifier ast node from an identifier token.
-pub fn ident_from_token(token: Token) -> Result<Identifier> {
+pub fn ident_from_token(token: Token) -> Result<Ident> {
     match token.kind {
-        TokenKind::Identifier(ident) => Ok(Identifier {
+        TokenKind::Identifier(ident) => Ok(Ident {
             name: ident,
             span: token.span,
         }),
@@ -137,8 +137,8 @@ impl Parser {
                 let ident = ident_from_token(self.eat()?)?;
                 let span = ident.span;
                 let (size, kind) = match (*ident.name.clone().as_str()).as_str() {
-                    "u32" => (4, TyKind::Literal(LiteralType::Uint(UintType::U32))),
-                    "usize" => (8, TyKind::Literal(LiteralType::Uint(UintType::Usize))),
+                    "u32" => (4, TyKind::Lit(LitTy::Uint(UintTy::U32))),
+                    "usize" => (8, TyKind::Lit(LitTy::Uint(UintTy::Usize))),
                     _ => (0, TyKind::UserDefined(ident)),
                 };
                 Ok(Ty { kind, span, size })
@@ -178,7 +178,7 @@ mod test {
         assert_eq!(
             ty,
             Ty {
-                kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
+                kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                 span: Span::new(2, 7),
                 size: 8,
             }
@@ -194,7 +194,7 @@ mod test {
         assert_eq!(
             ty,
             Ty {
-                kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                 span: Span::new(2, 5),
                 size: 4,
             }
@@ -210,7 +210,7 @@ mod test {
         assert_eq!(
             ty,
             Ty {
-                kind: TyKind::UserDefined(Identifier {
+                kind: TyKind::UserDefined(Ident {
                     name: Symbol::intern("MyType"),
                     span: Span::new(2, 8),
                 }),

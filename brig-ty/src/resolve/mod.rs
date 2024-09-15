@@ -6,7 +6,7 @@ use crate::{get_ty, FnTy, Ty, TyKind, UintTy};
 pub fn populate_global_decls(program: &Program) -> Result<()> {
     for decl in &program.declarations {
         match &decl.kind {
-            brig_ast::DeclarationKind::Function(func) => {
+            brig_ast::DeclKind::Fn(func) => {
                 let mut args = Vec::with_capacity(func.parameters.len());
                 for param in &func.parameters {
                     let ty = parse_ast_ty(&param.ty)?;
@@ -43,13 +43,13 @@ pub fn populate_global_decls(program: &Program) -> Result<()> {
 /// ```
 pub fn parse_ast_ty(ty: &brig_ast::Ty) -> Result<Ty> {
     let kind = match &ty.kind {
-        brig_ast::TyKind::Literal(lit) => match lit {
-            brig_ast::LiteralType::Uint(uint) => match uint {
-                brig_ast::UintType::U32 => TyKind::Uint(UintTy::U32),
-                brig_ast::UintType::Usize => TyKind::Uint(UintTy::Usize),
+        brig_ast::TyKind::Lit(lit) => match lit {
+            brig_ast::LitTy::Uint(uint) => match uint {
+                brig_ast::UintTy::U32 => TyKind::Uint(UintTy::U32),
+                brig_ast::UintTy::Usize => TyKind::Uint(UintTy::Usize),
             },
-            brig_ast::LiteralType::Unit => TyKind::Unit,
-            brig_ast::LiteralType::Unresolved => {
+            brig_ast::LitTy::Unit => TyKind::Unit,
+            brig_ast::LitTy::Unresolved => {
                 return Err(Error::other("unresolved literal type", ty.span))
             }
         },
@@ -65,7 +65,7 @@ pub fn parse_ast_ty(ty: &brig_ast::Ty) -> Result<Ty> {
                 }
             }
         }
-        brig_ast::TyKind::Function(_) => todo!("Function type"),
+        brig_ast::TyKind::Fn(_) => todo!("Function type"),
         brig_ast::TyKind::Unspecified => todo!("Unspecified type"),
     };
 

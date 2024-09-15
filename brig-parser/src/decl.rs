@@ -1,35 +1,35 @@
 use crate::*;
 
 impl Parser {
-    pub fn parse_declaration(&mut self) -> Result<Declaration> {
+    pub fn parse_declaration(&mut self) -> Result<Decl> {
         let modifiers = self.parse_declaration_modifiers()?;
         let token = self.peek()?;
         let kind = match token.kind {
-            TokenKind::Fn => DeclarationKind::Function(self.parse_function_declaration(modifiers)?),
+            TokenKind::Fn => DeclKind::Fn(self.parse_function_declaration(modifiers)?),
             x => return Err(Error::expected_token(x, vec!["fn".to_string()], token.span)),
         };
-        Ok(Declaration { kind })
+        Ok(Decl { kind })
     }
 
-    pub fn parse_declaration_modifiers(&mut self) -> Result<Vec<DeclarationModifier>> {
+    pub fn parse_declaration_modifiers(&mut self) -> Result<Vec<DeclMod>> {
         static MODIFIERS: [TokenKind; 1] = [TokenKind::Extern];
         let mut modifiers = Vec::new();
 
         while MODIFIERS.contains(&self.peek()?.kind) {
             let Token { kind, span } = self.eat()?;
             let kind = match kind {
-                TokenKind::Extern => DeclarationModifierKind::Extern,
+                TokenKind::Extern => DeclModKind::Extern,
                 _ => unreachable!("token kind in MODIFIERS is not handled in match statement"),
             };
-            modifiers.push(DeclarationModifier { kind, span });
+            modifiers.push(DeclMod { kind, span });
         }
         Ok(modifiers)
     }
 
     pub fn parse_function_declaration(
         &mut self,
-        modifiers: Vec<DeclarationModifier>,
-    ) -> Result<FunctionDeclaration> {
+        modifiers: Vec<DeclMod>,
+    ) -> Result<FnDecl> {
         // <modifiers> fn [name] ( <params> ): <return_type> { <body> }
         let start = modifiers
             .first()
@@ -51,7 +51,7 @@ impl Parser {
             }
 
             let span = Span::compose(ident.span, ty.span);
-            Ok(Parameter { ident, ty, span })
+            Ok(Param { ident, ty, span })
         })?;
 
         // Parse return type
@@ -71,7 +71,7 @@ impl Parser {
                 body = Some(block);
             }
         };
-        Ok(FunctionDeclaration {
+        Ok(FnDecl {
             name,
             modifiers,
             parameters,
@@ -100,33 +100,33 @@ mod test {
         assert_eq!(declaration.span(), Span::new(0, 38));
         assert_eq!(
             declaration,
-            Declaration {
-                kind: DeclarationKind::Function(FunctionDeclaration {
-                    name: Identifier {
+            Decl {
+                kind: DeclKind::Fn(FnDecl {
+                    name: Ident {
                         name: Symbol::intern("test"),
                         span: Span::new(10, 14),
                     },
                     parameters: Punctuated {
                         elements: vec![
-                            Parameter {
-                                ident: Identifier {
+                            Param {
+                                ident: Ident {
                                     name: Symbol::intern("a"),
                                     span: Span::new(15, 16),
                                 },
                                 ty: Ty {
-                                    kind: TyKind::Literal(LiteralType::Uint(UintType::Usize)),
+                                    kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                                     span: Span::new(18, 23),
                                     size: 8,
                                 },
                                 span: Span::new(15, 23),
                             },
-                            Parameter {
-                                ident: Identifier {
+                            Param {
+                                ident: Ident {
                                     name: Symbol::intern("b"),
                                     span: Span::new(25, 26),
                                 },
                                 ty: Ty {
-                                    kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                                    kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                                     span: Span::new(28, 31),
                                     size: 4,
                                 },
@@ -136,14 +136,14 @@ mod test {
                         span: Span::new(15, 26),
                     },
                     return_ty: Ty {
-                        kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                        kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                         span: Span::new(34, 37),
                         size: 4,
                     },
                     body: None,
                     span: Span::new(0, 38),
-                    modifiers: vec![DeclarationModifier {
-                        kind: DeclarationModifierKind::Extern,
+                    modifiers: vec![DeclMod {
+                        kind: DeclModKind::Extern,
                         span: Span::new(0, 6),
                     }],
                 }),
@@ -165,8 +165,8 @@ mod test {
         assert_eq!(function.span(), Span::new(0, 33));
         assert_eq!(
             function,
-            FunctionDeclaration {
-                name: Identifier {
+            FnDecl {
+                name: Ident {
                     name: Symbol::intern("test"),
                     span: Span::new(3, 7)
                 },
@@ -181,8 +181,8 @@ mod test {
                     span: Span::new(10, 10)
                 },
                 body: Some(Block {
-                    statements: vec![Statement::VariableDeclaration(VariableDeclaration {
-                        name: Identifier {
+                    stmts: vec![Stmt::LetDecl(LetDecl {
+                        name: Ident {
                             name: Symbol::intern("x"),
                             span: Span::new(28, 29)
                         },
@@ -191,9 +191,9 @@ mod test {
                             size: 0,
                             span: Span::new(30, 30)
                         },
-                        expr: Some(Expression::Literal(Literal {
-                            value: LiteralValue::Int(IntLit { value: 5 }),
-                            ty: LiteralType::Unresolved,
+                        expr: Some(Expr::Lit(Lit {
+                            value: LitVal::Int(IntLit { value: 5 }),
+                            ty: LitTy::Unresolved,
                             span: Span::new(32, 33)
                         })),
                         span: Span::new(24, 33)

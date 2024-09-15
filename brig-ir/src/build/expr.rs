@@ -1,4 +1,4 @@
-use brig_ast::{AstNode, BinaryExpression, BinaryOperator, CallExpression, Expression};
+use brig_ast::{AstNode, BinExpr, BinOp, CallExpr, Expr};
 use brig_diagnostic::{Error, Result};
 
 use crate::{
@@ -9,18 +9,18 @@ use crate::{
 type Res = Result<Option<Operand>>;
 
 impl crate::Ir {
-    pub fn traverse_expr(&mut self, expr: Expression, scope: Scope) -> Res {
+    pub fn traverse_expr(&mut self, expr: Expr, scope: Scope) -> Res {
         match expr {
-            Expression::Call(c) => self.traverse_call_expression(c, scope),
-            Expression::Literal(lit) => self.traverse_literal(lit),
-            Expression::Binary(expr) => self.traverse_binary(expr, scope),
-            Expression::Identifier(ident) => self.traverse_identifier(ident, scope),
-            Expression::Block(block) => Ok(self.traverse_block(block, scope)?.1),
+            Expr::Call(c) => self.traverse_call_expression(c, scope),
+            Expr::Lit(lit) => self.traverse_literal(lit),
+            Expr::Bin(expr) => self.traverse_binary(expr, scope),
+            Expr::Ident(ident) => self.traverse_identifier(ident, scope),
+            Expr::Block(block) => Ok(self.traverse_block(block, scope)?.1),
         }
     }
 
-    pub fn traverse_binary(&mut self, expr: BinaryExpression, scope: Scope) -> Res {
-        if let BinaryOperator::Assign = expr.op {
+    pub fn traverse_binary(&mut self, expr: BinExpr, scope: Scope) -> Res {
+        if let BinOp::Assign = expr.op {
             return Err(Error::other(
                 "assignment operator '=' is not an rvalue expression",
                 expr.span,
@@ -56,9 +56,9 @@ impl crate::Ir {
         }))
     }
 
-    pub fn traverse_lvalue(&mut self, expr: Expression, scope: Scope) -> Result<Lvalue> {
+    pub fn traverse_lvalue(&mut self, expr: Expr, scope: Scope) -> Result<Lvalue> {
         match expr {
-            brig_ast::Expression::Identifier(ident) => {
+            brig_ast::Expr::Ident(ident) => {
                 let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
                     Error::other(
                         format!("variable '{}' not found", *ident.name.as_str()),
@@ -74,30 +74,30 @@ impl crate::Ir {
         }
     }
 
-    pub fn traverse_rvalue(&mut self, expr: Expression, scope: Scope) -> Res {
+    pub fn traverse_rvalue(&mut self, expr: Expr, scope: Scope) -> Res {
         match expr {
-            Expression::Binary(expr) => self.traverse_binary(expr, scope),
-            Expression::Call(call) => self.traverse_call_expression(call, scope),
-            Expression::Block(block) => self.traverse_block(block, scope).map(|x| x.1),
-            Expression::Literal(lit) => self.traverse_literal(lit),
-            Expression::Identifier(ident) => self.traverse_identifier(ident, scope),
+            Expr::Bin(expr) => self.traverse_binary(expr, scope),
+            Expr::Call(call) => self.traverse_call_expression(call, scope),
+            Expr::Block(block) => self.traverse_block(block, scope).map(|x| x.1),
+            Expr::Lit(lit) => self.traverse_literal(lit),
+            Expr::Ident(ident) => self.traverse_identifier(ident, scope),
         }
     }
 
-    pub fn traverse_literal(&mut self, lit: brig_ast::Literal) -> Res {
+    pub fn traverse_literal(&mut self, lit: brig_ast::Lit) -> Res {
         match lit.value {
-            brig_ast::LiteralValue::Int(val) => Ok(Some(Operand {
+            brig_ast::LitVal::Int(val) => Ok(Some(Operand {
                 size: lit.ty.size(),
                 kind: OperandKind::IntegerLit(val.value),
             })),
-            brig_ast::LiteralValue::Unit => Ok(Some(Operand {
+            brig_ast::LitVal::Unit => Ok(Some(Operand {
                 size: 0,
                 kind: OperandKind::Unit,
             })),
         }
     }
 
-    pub fn traverse_identifier(&mut self, ident: brig_ast::Identifier, scope: Scope) -> Res {
+    pub fn traverse_identifier(&mut self, ident: brig_ast::Ident, scope: Scope) -> Res {
         let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
             Error::other(
                 format!("variable '{}' not found", *ident.name.as_str()),
@@ -110,7 +110,7 @@ impl crate::Ir {
         }))
     }
 
-    pub fn traverse_call_expression(&mut self, call: CallExpression, scope: Scope) -> Res {
+    pub fn traverse_call_expression(&mut self, call: CallExpr, scope: Scope) -> Res {
         let fn_ty = match call.fn_ty {
             Some(ty) => ty,
             None => return Err(Error::other("function type not found", call.span)),

@@ -1,4 +1,4 @@
-use brig_ast::{Statement, Ty, VariableDeclaration};
+use brig_ast::{Stmt, Ty, LetDecl};
 use brig_diagnostic::{Error, Result};
 
 use crate::TypeChecker;
@@ -6,16 +6,16 @@ use crate::TypeChecker;
 impl TypeChecker {
     /// NOTE: the `ty` parameter is only used for return statements. That's terrible.
     /// But it works right now. I gotta refactor all this anyway.
-    pub fn check_statement(&mut self, stmt: &mut Statement, ty: Option<&Ty>) -> Result<()> {
+    pub fn check_statement(&mut self, stmt: &mut Stmt, ty: Option<&Ty>) -> Result<()> {
         match stmt {
-            Statement::Expr(ref mut e) => self.check_expression(e, None).map(|_| ()),
-            Statement::Semi(ref mut e) => self.check_expression(e, None).map(|_| ()),
-            Statement::Return(ref mut ret) => self.check_expression(&mut ret.expr, ty).map(|_| ()),
-            Statement::VariableDeclaration(ref mut decl) => self.check_variable_declaration(decl),
-            Statement::None => Ok(()),
+            Stmt::Expr(ref mut e) => self.check_expression(e, None).map(|_| ()),
+            Stmt::Semi(ref mut e) => self.check_expression(e, None).map(|_| ()),
+            Stmt::Return(ref mut ret) => self.check_expression(&mut ret.expr, ty).map(|_| ()),
+            Stmt::LetDecl(ref mut decl) => self.check_variable_declaration(decl),
+            Stmt::None => Ok(()),
         }
     }
-    pub fn check_variable_declaration(&mut self, decl: &mut VariableDeclaration) -> Result<()> {
+    pub fn check_variable_declaration(&mut self, decl: &mut LetDecl) -> Result<()> {
         if let Some(ref mut expr) = decl.expr {
             let ty = self.check_expression(expr, Some(&decl.ty))?;
             if ty.kind != decl.ty.kind {
@@ -39,10 +39,10 @@ mod test {
     #[test]
     fn check_return_statement() {
         // return 42;
-        let mut stmt = Statement::Return(ReturnStatement {
-            expr: Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 42 }),
-                ty: LiteralType::Unresolved,
+        let mut stmt = Stmt::Return(ReturnStmt {
+            expr: Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 42 }),
+                ty: LitTy::Unresolved,
                 span: Span::new(7, 9),
             }),
             span: Span::new(0, 10),
@@ -53,10 +53,10 @@ mod test {
 
         assert_eq!(
             stmt,
-            Statement::Return(ReturnStatement {
-                expr: Expression::Literal(Literal {
-                    value: LiteralValue::Int(IntLit { value: 42 }),
-                    ty: LiteralType::Uint(UintType::U32),
+            Stmt::Return(ReturnStmt {
+                expr: Expr::Lit(Lit {
+                    value: LitVal::Int(IntLit { value: 42 }),
+                    ty: LitTy::Uint(UintTy::U32),
                     span: Span::new(7, 9),
                 }),
                 span: Span::new(0, 10),
@@ -67,19 +67,19 @@ mod test {
     #[test]
     fn check_variable_declaration() {
         // let x: u32 = 42;
-        let mut decl = VariableDeclaration {
-            name: Identifier {
+        let mut decl = LetDecl {
+            name: Ident {
                 name: Symbol::intern("x"),
                 span: Span::new(4, 5),
             },
             ty: Ty {
-                kind: TyKind::Literal(LiteralType::Uint(UintType::U32)),
+                kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                 size: 4,
                 span: Span::new(7, 9),
             },
-            expr: Some(Expression::Literal(Literal {
-                value: LiteralValue::Int(IntLit { value: 42 }),
-                ty: LiteralType::Unresolved,
+            expr: Some(Expr::Lit(Lit {
+                value: LitVal::Int(IntLit { value: 42 }),
+                ty: LitTy::Unresolved,
                 span: Span::new(13, 14),
             })),
             span: Span::new(0, 15),
@@ -90,7 +90,7 @@ mod test {
 
         assert_eq!(
             decl.ty.kind,
-            TyKind::Literal(LiteralType::Uint(UintType::U32))
+            TyKind::Lit(LitTy::Uint(UintTy::U32))
         );
     }
 }
