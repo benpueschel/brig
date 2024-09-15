@@ -4,6 +4,16 @@
 //! and we want to avoid copying them as much as possible. This module provides a way to store
 //! strings in a global table, and then pass around an index to that table instead of the string
 //! itself.
+//!
+//! To use this module, you can call [`Symbol::intern()`] to get a [Symbol] object, which
+//! is an index into the global table. You can then call [`Symbol::as_str()`] to get a [IntStr]
+//! object, which is a thin wrapper around the string.
+//!
+//! Note that as long as the [IntStr] object is alive, the global table is locked, so you should
+//! not hold onto it for long.
+//! If you need to hold on to the string, store the [Symbol] object instead, and call
+//! [`Symbol::as_str()`] or [`Symbol::to_string()`] when you need the string.
+//!
 
 use std::{
     fmt::Display,
