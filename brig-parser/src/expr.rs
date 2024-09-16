@@ -161,23 +161,46 @@ impl Parser {
     pub fn parse_binary_operator(&mut self) -> Result<BinOp> {
         let token = self.eat()?;
 
-        // TODO: parse a second operator (call parse_binary_operator again, then match it's
-        // operator with the first operator)
-        match token.kind {
-            TokenKind::Star => Ok(BinOp::Multiply),
-            TokenKind::Slash => Ok(BinOp::Divide),
-            TokenKind::Plus => Ok(BinOp::Add),
-            TokenKind::Minus => Ok(BinOp::Subtract),
-            TokenKind::LeftCaret => Ok(BinOp::LessThan),
-            TokenKind::RightCaret => Ok(BinOp::GreaterThan),
+        if token.kind == TokenKind::Equal {
+            let token = self.eat()?;
+            return match token.kind {
+                TokenKind::Equal => Ok(BinOp::Eq),
+                x => Err(Error::expected_token(
+                    x.to_string(),
+                    vec![TokenKind::Equal.to_str().to_string()],
+                    token.span,
+                )),
+            };
+        }
 
-            x => Err(Error::expected_token(
+        let next = self.peek()?;
+        use TokenKind::*;
+        match (token.kind, next.kind) {
+            (Plus, _) => Ok(BinOp::Add),
+            (Minus, _) => Ok(BinOp::Sub),
+            (Star, _) => Ok(BinOp::Mul),
+            (Slash, _) => Ok(BinOp::Div),
+            (LeftCaret, Equal) => {
+                self.eat()?;
+                Ok(BinOp::Lte)
+            }
+            (RightCaret, Equal) => {
+                self.eat()?;
+                Ok(BinOp::Gte)
+            }
+            (LeftCaret, _) => Ok(BinOp::Lt),
+            (RightCaret, _) => Ok(BinOp::Gt),
+
+            (x, _) => Err(Error::expected_token(
                 x.to_string(),
                 vec![
                     TokenKind::Star.to_str().to_string(),
                     TokenKind::Slash.to_str().to_string(),
                     TokenKind::Plus.to_str().to_string(),
                     TokenKind::Minus.to_str().to_string(),
+                    TokenKind::Equal.to_str().to_string(),
+                    TokenKind::LeftCaret.to_str().to_string(),
+                    TokenKind::RightCaret.to_str().to_string(),
                     TokenKind::Equal.to_str().to_string(),
                 ],
                 token.span,
@@ -221,6 +244,28 @@ mod test {
     }
 
     #[test]
+    pub fn test_gte() {
+        let input = "x >= 10";
+        test_base(
+            input,
+            Expr::Bin(BinExpr {
+                lhs: Box::new(Expr::Ident(Ident {
+                    name: Symbol::intern("x"),
+                    span: Span::new(0, 1),
+                })),
+                rhs: Box::new(Expr::Lit(Lit {
+                    value: LitVal::Int(IntLit { value: 10 }),
+                    ty: LitTy::Unresolved,
+                    span: Span::new(5, 7),
+                })),
+                op: BinOp::Gte,
+                span: Span::new(0, 7),
+                ty_kind: None,
+            }),
+        );
+    }
+
+    #[test]
     pub fn parse_comparison_expr() {
         let input = "x < 10";
         test_base(
@@ -235,7 +280,7 @@ mod test {
                     ty: LitTy::Unresolved,
                     span: Span::new(4, 6),
                 })),
-                op: BinOp::LessThan,
+                op: BinOp::Lt,
                 span: Span::new(0, 6),
                 ty_kind: None,
             }),
@@ -280,7 +325,7 @@ mod test {
                     ty: LitTy::Unresolved,
                     span: Span::new(5, 8),
                 })),
-                op: BinOp::Multiply,
+                op: BinOp::Mul,
                 span: Span::new(0, 8),
                 ty_kind: None,
             }),
@@ -324,7 +369,7 @@ mod test {
                     ty: LitTy::Unresolved,
                     span: Span::new(10, 11),
                 })),
-                op: BinOp::Multiply,
+                op: BinOp::Mul,
                 ty_kind: None,
                 span: Span::new(1, 11),
             }),
@@ -412,7 +457,7 @@ mod test {
                         ty: LitTy::Unresolved,
                         span: Span::new(8, 10),
                     })),
-                    op: BinOp::Multiply,
+                    op: BinOp::Mul,
                     span: Span::new(4, 10),
                     ty_kind: None,
                 })),

@@ -59,6 +59,7 @@ pub struct Ir {
     pub fn_name: Symbol,
     pub is_extern: bool,
     pub fn_params: Vec<u64>,
+    pub return_op: Option<Operand>,
     pub span: Span,
 }
 
@@ -189,11 +190,14 @@ impl From<BinOp> for ExprOperator {
     fn from(value: BinOp) -> Self {
         match value {
             BinOp::Add => ExprOperator::Add,
-            BinOp::Subtract => ExprOperator::Sub,
-            BinOp::Multiply => ExprOperator::Mul,
-            BinOp::Divide => ExprOperator::Div,
-            BinOp::LessThan => ExprOperator::Lt,
-            BinOp::GreaterThan => ExprOperator::Gt,
+            BinOp::Sub => ExprOperator::Sub,
+            BinOp::Mul => ExprOperator::Mul,
+            BinOp::Div => ExprOperator::Div,
+            BinOp::Eq => ExprOperator::Eq,
+            BinOp::Lt => ExprOperator::Lt,
+            BinOp::Gt => ExprOperator::Gt,
+            BinOp::Lte => ExprOperator::Lte,
+            BinOp::Gte => ExprOperator::Gte,
         }
     }
 }

@@ -330,7 +330,7 @@ mod test {
                     span: Span::new(8, 9),
                 })),
                 ty_kind: None,
-                op: BinOp::Multiply,
+                op: BinOp::Mul,
                 span: Span::new(4, 9),
             })),
             ty_kind: None,

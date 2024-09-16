@@ -1,4 +1,4 @@
-use brig_ast::{AstNode, BinExpr, BinOp, CallExpr, Expr, IfExpr};
+use brig_ast::{AstNode, BinExpr, CallExpr, Expr, IfExpr};
 use brig_diagnostic::{Error, Result};
 
 use crate::{

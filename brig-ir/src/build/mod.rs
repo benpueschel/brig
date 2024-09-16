@@ -30,6 +30,7 @@ impl IrBuilder {
                 .iter()
                 .any(|m| matches!(m.kind, DeclModKind::Extern)),
             fn_params: vec![],
+            return_op: None,
             span: self.decl.span,
         };
 
@@ -70,7 +71,16 @@ impl IrBuilder {
             ir.fn_params.push(var_id);
         }
 
-        let (first_block, _) = ir.traverse_block(body, fn_scope, Some(IR_START_BLOCK))?;
+        let (first_block, return_op) = ir.traverse_block(body, fn_scope, Some(IR_START_BLOCK))?;
+        ir.return_op = return_op;
+
+        ir.current_block_mut().terminator = Some(Terminator {
+            kind: TerminatorKind::Goto {
+                target: IR_END_BLOCK,
+            },
+            span: self.decl.span,
+            scope: fn_scope,
+        });
 
         assert_ne!(ir.basic_blocks.len(), 0);
 

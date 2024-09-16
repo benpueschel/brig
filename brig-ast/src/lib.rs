@@ -265,11 +265,14 @@ impl AstNode for BinExpr {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BinOp {
     Add,
-    Subtract,
-    Multiply,
-    Divide,
-    LessThan,
-    GreaterThan,
+    Sub,
+    Mul,
+    Div,
+    Eq,
+    Lt,
+    Gt,
+    Lte,
+    Gte,
 }
 
 #[derive(Debug, Clone, PartialEq)]
