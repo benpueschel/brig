@@ -74,6 +74,9 @@ impl IrBuilder {
         let (first_block, return_op) = ir.traverse_block(body, fn_scope, Some(IR_START_BLOCK))?;
         ir.return_op = return_op;
 
+        // NOTE: this doesn't work because the last block may already be terminated (e.g. by a
+        // return statement). We need to find a better way to handle this.
+        /*
         ir.current_block_mut().terminator = Some(Terminator {
             kind: TerminatorKind::Goto {
                 target: IR_END_BLOCK,
@@ -81,6 +84,7 @@ impl IrBuilder {
             span: self.decl.span,
             scope: fn_scope,
         });
+        */
 
         assert_ne!(ir.basic_blocks.len(), 0);
 
