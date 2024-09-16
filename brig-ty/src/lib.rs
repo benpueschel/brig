@@ -36,6 +36,7 @@ pub struct Ty {
 pub enum TyKind {
     Int(IntTy),
     Uint(UintTy),
+    Bool,
     Unit,
     UserDefined(UserDefinedTy),
     Function(FnTy),

@@ -64,6 +64,7 @@ impl TypeChecker {
                     _ => false,
                 }
             }
+            LitVal::Bool(_) => matches!(ty, LitTy::Bool),
             LitVal::Unit => matches!(ty, LitTy::Unit),
         }
     }
@@ -91,6 +92,14 @@ impl TypeChecker {
                     kind: TyKind::Lit(ty),
                     span: lit.span,
                     size,
+                })
+            }
+            LitVal::Bool(_) => {
+                lit.ty = LitTy::Bool;
+                Ok(Ty {
+                    kind: TyKind::Lit(LitTy::Bool),
+                    span: lit.span,
+                    size: 1,
                 })
             }
         }
@@ -190,6 +199,7 @@ impl TypeChecker {
     }
 
     pub fn check_binary_expression(&mut self, expr: &mut BinExpr, ty: Option<&Ty>) -> Result<Ty> {
+        let ty = if expr.op.is_comparison() { None } else { ty };
         let lhs = self.check_expression(&mut expr.lhs, ty)?;
         let rhs = self.check_expression(&mut expr.rhs, Some(&lhs))?;
         let span = Span::compose(lhs.span, rhs.span);
@@ -199,6 +209,19 @@ impl TypeChecker {
                 (rhs.kind, rhs.span),
             ));
         }
+
+        // If the operator is a comparison operator, the type of the expression is a bool.
+        // Otherwise, the type of the expression is the type of the operands
+        // (e.g. `1 + 2` is a u32, `1 == 2` is a bool)
+        if expr.op.is_comparison() {
+            expr.ty_kind = Some(TyKind::Lit(LitTy::Bool));
+            return Ok(Ty {
+                kind: TyKind::Lit(LitTy::Bool),
+                size: 1,
+                span,
+            });
+        }
+
         expr.ty_kind = Some(lhs.kind.clone());
         Ok(Ty {
             kind: lhs.kind,

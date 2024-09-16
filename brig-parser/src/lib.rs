@@ -139,6 +139,7 @@ impl Parser {
                 let (size, kind) = match (*ident.name.clone().as_str()).as_str() {
                     "u32" => (4, TyKind::Lit(LitTy::Uint(UintTy::U32))),
                     "usize" => (8, TyKind::Lit(LitTy::Uint(UintTy::Usize))),
+                    "bool" => (1, TyKind::Lit(LitTy::Bool)),
                     _ => (0, TyKind::UserDefined(ident)),
                 };
                 Ok(Ty { kind, span, size })

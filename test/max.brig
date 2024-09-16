@@ -1,5 +1,6 @@
 extern fn max(a: u32, b: u32): u32 {
-	if a >= b {
+	let nice: bool = a >= b;
+	if nice {
 		a
 	} else {
 		b

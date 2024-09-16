@@ -275,6 +275,17 @@ pub enum BinOp {
     Gte,
 }
 
+impl BinOp {
+    /// Whether the binary operator is a comparison operator.
+    /// Comparision operators are `==`, `<`, `>`, `<=`, and `>=`.
+    pub fn is_comparison(&self) -> bool {
+        matches!(
+            self,
+            BinOp::Eq | BinOp::Lt | BinOp::Gt | BinOp::Lte | BinOp::Gte
+        )
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lit {
     /// The value of the literal.
@@ -294,6 +305,7 @@ impl AstNode for Lit {
 #[derive(Debug, Clone, PartialEq)]
 pub enum LitVal {
     Int(IntLit),
+    Bool(bool),
     Unit,
 }
 
@@ -404,6 +416,8 @@ pub enum LitTy {
     Uint(UintTy),
     /// The unit type. Equivalent to `void` in C-like languages.
     Unit,
+    /// The boolean type.
+    Bool,
     /// A type that has not been resolved yet.
     Unresolved,
 }
@@ -413,6 +427,7 @@ impl LitTy {
         match self {
             LitTy::Uint(UintTy::U32) => 4,
             LitTy::Uint(UintTy::Usize) => std::mem::size_of::<usize>(),
+            LitTy::Bool => 1,
             LitTy::Unit => 0,
             LitTy::Unresolved => usize::MAX,
         }
@@ -440,6 +455,7 @@ impl Display for LitTy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LitTy::Uint(uint) => write!(f, "{}", uint),
+            LitTy::Bool => write!(f, "bool"),
             LitTy::Unit => write!(f, "()"),
             LitTy::Unresolved => write!(f, "unresolved"),
         }

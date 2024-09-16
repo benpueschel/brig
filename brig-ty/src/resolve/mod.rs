@@ -3,6 +3,8 @@ use brig_diagnostic::{Error, Result};
 
 use crate::{get_ty, FnTy, Ty, TyKind, UintTy};
 
+// TODO: pub fn populate_mod_decls(mod: &Module, path: Path) -> Result<()> {}
+// The above function should populate any module-level declarations into the type map.
 pub fn populate_global_decls(program: &Program) -> Result<()> {
     for decl in &program.declarations {
         match &decl.kind {
@@ -48,6 +50,7 @@ pub fn parse_ast_ty(ty: &brig_ast::Ty) -> Result<Ty> {
                 brig_ast::UintTy::U32 => TyKind::Uint(UintTy::U32),
                 brig_ast::UintTy::Usize => TyKind::Uint(UintTy::Usize),
             },
+            brig_ast::LitTy::Bool => TyKind::Bool,
             brig_ast::LitTy::Unit => TyKind::Unit,
             brig_ast::LitTy::Unresolved => {
                 return Err(Error::other("unresolved literal type", ty.span))
