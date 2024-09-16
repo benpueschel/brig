@@ -12,6 +12,10 @@ impl TypeChecker {
     }
 
     pub fn check_function_declaration(&mut self, decl: &mut FnDecl) -> Result<()> {
+        if decl.return_ty.kind == TyKind::Unspecified {
+            decl.return_ty.kind = TyKind::Lit(brig_ast::LitTy::Unit);
+        }
+
         let kind = TyKind::Fn(FnTy {
             name: decl.name.name,
             span: decl.span,
