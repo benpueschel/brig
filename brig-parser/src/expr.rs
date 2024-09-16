@@ -236,6 +236,37 @@ mod test {
     }
 
     #[test]
+    pub fn parse_fn_call() {
+        let input = "foo(1, 2)";
+        test_base(
+            input,
+            Expr::Call(CallExpr {
+                callee: Ident {
+                    name: Symbol::intern("foo"),
+                    span: Span::new(0, 3),
+                },
+                args: Punctuated {
+                    elements: vec![
+                        Expr::Lit(Lit {
+                            value: LitVal::Int(IntLit { value: 1 }),
+                            ty: LitTy::Unresolved,
+                            span: Span::new(4, 5),
+                        }),
+                        Expr::Lit(Lit {
+                            value: LitVal::Int(IntLit { value: 2 }),
+                            ty: LitTy::Unresolved,
+                            span: Span::new(7, 8),
+                        }),
+                    ],
+                    span: Span::new(4, 8),
+                },
+                fn_ty: None,
+                span: Span::new(0, 8),
+            }),
+        );
+    }
+
+    #[test]
     pub fn parse_assignment_expr() {
         let input = "x = y";
         test_base(
