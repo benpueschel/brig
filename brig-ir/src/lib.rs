@@ -192,7 +192,6 @@ impl From<BinOp> for ExprOperator {
             BinOp::Subtract => ExprOperator::Sub,
             BinOp::Multiply => ExprOperator::Mul,
             BinOp::Divide => ExprOperator::Div,
-            BinOp::Assign => panic!("assign operator is not a valid expression operator"),
             BinOp::LessThan => ExprOperator::Lt,
             BinOp::GreaterThan => ExprOperator::Gt,
         }

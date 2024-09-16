@@ -57,10 +57,13 @@ impl Parser {
         Ok(left)
     }
     pub fn parse_assignment_expression(&mut self) -> Result<Expr> {
-        self.parse_binary_expression(Parser::parse_comparison_expression, |this| {
-            let x = this.peek()?.kind;
-            Ok(x == TokenKind::Equal)
-        })
+        let mut left = self.parse_comparison_expression()?;
+        while self.peek()?.kind == TokenKind::Equal {
+            verify_token!(self.eat()?, TokenKind::Equal);
+            let right = self.parse_expression()?;
+            left = Expr::Assign(Box::new(left), Box::new(right));
+        }
+        Ok(left)
     }
     pub fn parse_comparison_expression(&mut self) -> Result<Expr> {
         self.parse_binary_expression(Parser::parse_add_expression, |this| {
@@ -165,7 +168,6 @@ impl Parser {
             TokenKind::Slash => Ok(BinOp::Divide),
             TokenKind::Plus => Ok(BinOp::Add),
             TokenKind::Minus => Ok(BinOp::Subtract),
-            TokenKind::Equal => Ok(BinOp::Assign),
             TokenKind::LeftCaret => Ok(BinOp::LessThan),
             TokenKind::RightCaret => Ok(BinOp::GreaterThan),
 
@@ -205,19 +207,16 @@ mod test {
         let input = "x = y";
         test_base(
             input,
-            Expr::Bin(BinExpr {
-                lhs: Box::new(Expr::Ident(Ident {
+            Expr::Assign(
+                Box::new(Expr::Ident(Ident {
                     name: Symbol::intern("x"),
                     span: Span::new(0, 1),
                 })),
-                rhs: Box::new(Expr::Ident(Ident {
+                Box::new(Expr::Ident(Ident {
                     name: Symbol::intern("y"),
                     span: Span::new(4, 5),
                 })),
-                op: BinOp::Assign,
-                span: Span::new(0, 5),
-                ty_kind: None,
-            }),
+            ),
         );
     }
 
@@ -368,12 +367,12 @@ mod test {
         let input = "x = 5 + 10";
         test_base(
             input,
-            Expr::Bin(BinExpr {
-                lhs: Box::new(Expr::Ident(Ident {
+            Expr::Assign(
+                Box::new(Expr::Ident(Ident {
                     name: Symbol::intern("x"),
                     span: Span::new(0, 1),
                 })),
-                rhs: Box::new(Expr::Bin(BinExpr {
+                Box::new(Expr::Bin(BinExpr {
                     lhs: Box::new(Expr::Lit(Lit {
                         value: LitVal::Int(IntLit { value: 5 }),
                         ty: LitTy::Unresolved,
@@ -388,10 +387,7 @@ mod test {
                     span: Span::new(4, 10),
                     ty_kind: None,
                 })),
-                op: BinOp::Assign,
-                span: Span::new(0, 10),
-                ty_kind: None,
-            }),
+            ),
         );
     }
 

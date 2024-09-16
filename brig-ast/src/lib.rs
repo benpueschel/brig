@@ -210,6 +210,7 @@ pub enum Expr {
     Call(CallExpr),
     Lit(Lit),
     Bin(BinExpr),
+    Assign(Box<Expr>, Box<Expr>),
     Ident(Ident),
     Block(Block),
     If(IfExpr),
@@ -220,6 +221,7 @@ impl AstNode for Expr {
         match self {
             Expr::Lit(l) => l.span,
             Expr::Bin(b) => b.span,
+            Expr::Assign(lhs, rhs) => Span::compose(lhs.span(), rhs.span()),
             Expr::Ident(v) => v.span,
             Expr::Call(c) => c.span,
             Expr::Block(b) => b.span,
@@ -266,7 +268,6 @@ pub enum BinOp {
     Subtract,
     Multiply,
     Divide,
-    Assign,
     LessThan,
     GreaterThan,
 }

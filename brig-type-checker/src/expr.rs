@@ -1,4 +1,4 @@
-use brig_ast::{BinExpr, CallExpr, Expr, IfExpr, Lit, LitTy, LitVal, Ty, TyKind, UintTy};
+use brig_ast::{AstNode, BinExpr, CallExpr, Expr, IfExpr, Lit, LitTy, LitVal, Ty, TyKind, UintTy};
 use brig_common::Span;
 use brig_diagnostic::{Error, Result};
 
@@ -10,6 +10,21 @@ impl TypeChecker {
     pub fn check_expression(&mut self, expr: &mut Expr, ty: Option<&Ty>) -> Result<Ty> {
         match expr {
             Expr::Bin(ref mut e) => self.check_binary_expression(e, ty),
+            Expr::Assign(ref mut lhs, ref mut rhs) => {
+                let lhs_ty = self.check_expression(lhs, None)?;
+                let rhs_ty = self.check_expression(rhs, Some(&lhs_ty))?;
+                if lhs_ty.kind != rhs_ty.kind {
+                    return Err(Error::type_mismatch(
+                        (lhs_ty.kind, lhs_ty.span),
+                        (rhs_ty.kind, rhs_ty.span),
+                    ));
+                }
+                Ok(Ty {
+                    kind: TyKind::Lit(LitTy::Unit),
+                    size: 0,
+                    span: expr.span(),
+                })
+            }
             Expr::Lit(ref mut lit) => self.check_literal(lit, ty),
             Expr::Call(ref mut call) => self.check_call_expression(call, ty),
             Expr::If(if_expr) => self.check_if_expression(if_expr, ty),

@@ -1,4 +1,4 @@
-use brig_ast::{AstNode, BinOp, Expr, LetDecl, ReturnStmt};
+use brig_ast::{AstNode, Expr, LetDecl, ReturnStmt};
 use brig_diagnostic::{Error, Result};
 
 use crate::{
@@ -9,8 +9,9 @@ use crate::{
 type Res = Result<Option<Operand>>;
 impl crate::Ir {
     pub fn traverse_expr_stmt(&mut self, expr: Expr, scope: Scope) -> Res {
+        let span = expr.span();
         match expr {
-            brig_ast::Expr::Call(call) => {
+            Expr::Call(call) => {
                 let call = self.traverse_call_expression(call, scope)?;
                 let size = call.ty.ret.size;
                 let temp = Lvalue::Temp(self.alloc_temp(size, scope));
@@ -31,24 +32,22 @@ impl crate::Ir {
                     size,
                 }))
             }
-            brig_ast::Expr::Block(block) => Ok(self.traverse_block(block, scope, None)?.1),
-            brig_ast::Expr::If(if_expr) => self.traverse_if_expression(if_expr, scope),
-            brig_ast::Expr::Bin(expr) => {
-                // TODO: move into a separate assignment statement instead of an expression
-                if let BinOp::Assign = expr.op {
-                    let left = self.traverse_lvalue(*expr.lhs, scope)?;
-                    let right = self.traverse_expr(*expr.rhs, scope)?.ok_or_else(|| {
-                        Error::other("right-hand side of assignment is not an rvalue", expr.span)
-                    })?;
-                    self.current_block_mut().statements.push(crate::Statement {
-                        kind: StatementKind::Assign(left, right),
-                        span: expr.span,
-                    });
-                }
+            Expr::Block(block) => Ok(self.traverse_block(block, scope, None)?.1),
+            Expr::If(if_expr) => self.traverse_if_expression(if_expr, scope),
+            Expr::Bin(expr) => self.traverse_binary(expr, scope),
+            Expr::Assign(lhs, rhs) => {
+                let lhs = self.traverse_lvalue(*lhs, scope)?;
+                let rhs = self.traverse_expr(*rhs, scope)?.ok_or_else(|| {
+                    Error::other("right-hand side of assignment is not an rvalue", span)
+                })?;
+                self.current_block_mut().statements.push(Statement {
+                    kind: StatementKind::Assign(lhs, rhs),
+                    span,
+                });
                 Ok(None)
             }
-            brig_ast::Expr::Lit(lit) => self.traverse_literal(lit),
-            brig_ast::Expr::Ident(ident) => self.traverse_identifier(ident, scope),
+            Expr::Lit(lit) => self.traverse_literal(lit),
+            Expr::Ident(ident) => self.traverse_identifier(ident, scope),
         }
     }
 

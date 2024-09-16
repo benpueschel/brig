@@ -10,13 +10,6 @@ type Res = Result<Option<Operand>>;
 
 impl crate::Ir {
     pub fn traverse_binary_as_rvalue(&mut self, expr: BinExpr, scope: Scope) -> Result<Rvalue> {
-        if let BinOp::Assign = expr.op {
-            return Err(Error::other(
-                "assignment operator '=' is not an rvalue expression",
-                expr.span,
-            ));
-        }
-
         let left = self.traverse_expr(*expr.lhs, scope)?.ok_or_else(|| {
             Error::other(
                 "left-hand side of binary expression is not an rvalue",
@@ -33,13 +26,6 @@ impl crate::Ir {
     }
 
     pub fn traverse_binary(&mut self, expr: BinExpr, scope: Scope) -> Res {
-        if let BinOp::Assign = expr.op {
-            return Err(Error::other(
-                "assignment operator '=' is not an rvalue expression",
-                expr.span,
-            ));
-        }
-
         let left = self.traverse_expr(*expr.lhs, scope)?.ok_or_else(|| {
             Error::other(
                 "left-hand side of binary expression is not an rvalue",
@@ -88,6 +74,7 @@ impl crate::Ir {
     }
 
     pub fn traverse_rvalue(&mut self, expr: Expr, scope: Scope) -> Result<Rvalue> {
+        let span = expr.span();
         match expr {
             Expr::Call(call) => {
                 let call = self.traverse_call_expression(call, scope)?;
@@ -98,6 +85,17 @@ impl crate::Ir {
                 brig_ast::LitVal::Unit => Ok(Rvalue::Unit),
             },
             Expr::Bin(expr) => self.traverse_binary_as_rvalue(expr, scope),
+            Expr::Assign(lhs, rhs) => {
+                let lhs = self.traverse_lvalue(*lhs, scope)?;
+                let rhs = self.traverse_expr(*rhs, scope)?.ok_or_else(|| {
+                    Error::other("right-hand side of assignment is not an rvalue", span)
+                })?;
+                self.current_block_mut().statements.push(Statement {
+                    kind: StatementKind::Assign(lhs, rhs),
+                    span,
+                });
+                Ok(Rvalue::Unit)
+            }
             Expr::Ident(ident) => {
                 let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
                     Error::other(
@@ -116,8 +114,20 @@ impl crate::Ir {
     }
 
     pub fn traverse_expr(&mut self, expr: Expr, scope: Scope) -> Res {
+        let span = expr.span();
         match expr {
             Expr::Bin(expr) => self.traverse_binary(expr, scope),
+            Expr::Assign(lhs, rhs) => {
+                let lhs = self.traverse_lvalue(*lhs, scope)?;
+                let rhs = self.traverse_expr(*rhs, scope)?.ok_or_else(|| {
+                    Error::other("right-hand side of assignment is not an rvalue", span)
+                })?;
+                self.current_block_mut().statements.push(Statement {
+                    kind: StatementKind::Assign(lhs, rhs),
+                    span,
+                });
+                Ok(None)
+            }
             Expr::Call(call) => {
                 let call = self.traverse_call_expression(call, scope)?;
                 let size = call.ty.ret.size;
