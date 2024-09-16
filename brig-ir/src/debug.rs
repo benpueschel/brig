@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
 use crate::{
-    ExprOperator, Ir, Lvalue, Operand, OperandKind, Rvalue, Statement, Terminator, TerminatorKind,
-    IR_END_BLOCK, IR_START_BLOCK,
+    BasicBlock, ExprOperator, Ir, Lvalue, Operand, OperandKind, Rvalue, Statement, Terminator,
+    TerminatorKind, IR_END_BLOCK, IR_START_BLOCK,
 };
 
 impl Display for Ir {
@@ -48,15 +48,11 @@ impl Display for Ir {
             })?;
 
         for (index, block) in self.basic_blocks.iter().enumerate() {
-            writeln!(f, "    bb{index}(scope {}): {{", block.scope.0)?;
+            let bb = BasicBlock(index);
+
+            writeln!(f, "    {bb}(scope {}): {{", block.scope.0)?;
             for stmt in &block.statements {
                 writeln!(f, "        {};", stmt)?;
-            }
-
-            if index == IR_START_BLOCK.0 {
-                writeln!(f, "        START;")?;
-            } else if index == IR_END_BLOCK.0 {
-                writeln!(f, "        END;")?;
             }
 
             if let Some(terminator) = &block.terminator {
@@ -76,17 +72,25 @@ impl Display for Terminator {
     }
 }
 
+impl Display for BasicBlock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            IR_START_BLOCK => write!(f, "START"),
+            IR_END_BLOCK => write!(f, "END"),
+            _ => write!(f, "bb{}", self.0),
+        }
+    }
+}
+
 impl Display for TerminatorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TerminatorKind::Return { expr } => write!(f, "return {}", expr),
-            TerminatorKind::Goto { target } => write!(f, "goto bb{}", target.index()),
+            TerminatorKind::Goto { target } => write!(f, "goto {}", target),
             TerminatorKind::If { condition, targets } => write!(
                 f,
-                "[if {}: goto bb{}; else goto bb{}]",
-                condition,
-                targets.0.index(),
-                targets.1.index()
+                "[if {}: goto {}; else goto {}]",
+                condition, targets.0, targets.1,
             ),
         }
     }
