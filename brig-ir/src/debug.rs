@@ -112,7 +112,7 @@ impl Display for Rvalue {
             Rvalue::Unit => write!(f, "()"),
             Rvalue::Variable(var) => write!(f, "{}", var.ident),
             Rvalue::Temp(temp) => write!(f, "t{}", temp.index),
-            Rvalue::BinaryExpr(lhs, op, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
+            Rvalue::BinaryExpr(op, lhs, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
             Rvalue::Call(call) => write!(
                 f,
                 "{}({})",
