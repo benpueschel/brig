@@ -12,7 +12,7 @@ impl Display for Ir {
             .iter()
             .map(|p| {
                 let var = &self.find_declaration(*p).var;
-                format!("{}: TODO TYPE", var.ident)
+                format!("{}: TODO TYPE ({} bytes)", var.ident, var.size)
             })
             .collect::<Vec<_>>();
 
@@ -23,9 +23,13 @@ impl Display for Ir {
             if i != 0 {
                 writeln!(f, "{indent}scope {} {{", i)?;
             }
-            s.var_decls
-                .iter()
-                .try_for_each(|d| writeln!(f, "{indent}    let {}: TODO TYPE", d.var.ident))?;
+            s.var_decls.iter().try_for_each(|d| {
+                writeln!(
+                    f,
+                    "{indent}    let {}: TODO TYPE ({} bytes)",
+                    d.var.ident, d.var.size
+                )
+            })?;
 
             s.temp_decls
                 .iter()

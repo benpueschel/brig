@@ -138,6 +138,16 @@ impl Parser {
                 ty: LitTy::Unresolved,
                 span: token.span,
             })),
+            TokenKind::True => Ok(Expr::Lit(Lit {
+                value: LitVal::Bool(true),
+                ty: LitTy::Unresolved,
+                span: token.span,
+            })),
+            TokenKind::False => Ok(Expr::Lit(Lit {
+                value: LitVal::Bool(false),
+                ty: LitTy::Unresolved,
+                span: token.span,
+            })),
             x => Err(Error::expected_token(
                 x.to_string(),
                 vec![
