@@ -64,7 +64,7 @@ impl IrBuilder {
                 scope: fn_scope,
                 var: Var {
                     ident: param.ident.clone(),
-                    size: param.ty.size,
+                    size: param.ty.size(),
                     id: var_id,
                 },
             });

@@ -119,7 +119,6 @@ mod test {
                 ty: Ty {
                     kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                     span: Span::new(9, 14),
-                    size: 8,
                 },
                 expr: Some(Expr::Lit(Lit {
                     value: LitVal::Int(IntLit { value: 5 }),
@@ -147,7 +146,6 @@ mod test {
                 ty: Ty {
                     kind: TyKind::Unspecified,
                     span: Span::new(8, 8),
-                    size: 0,
                 },
                 expr: Some(Expr::Lit(Lit {
                     value: LitVal::Int(IntLit { value: 5 }),

@@ -50,7 +50,6 @@ mod test {
                 },
                 ty: Ty {
                     kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
-                    size: 8,
                     span: Span::with_len(6, 5),
                 },
                 expr: Some(Expr::Block(Block {
@@ -86,7 +85,6 @@ mod test {
                         },
                         ty: Ty {
                             kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
-                            size: 4,
                             span: Span::with_len(7, 3),
                         },
                         expr: Some(Expr::Lit(Lit {
@@ -136,7 +134,6 @@ mod test {
                         },
                         ty: Ty {
                             kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
-                            size: 4,
                             span: Span::with_len(7, 3),
                         },
                         expr: Some(Expr::Lit(Lit {

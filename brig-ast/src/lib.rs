@@ -354,8 +354,18 @@ impl AstNode for Ident {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ty {
     pub kind: TyKind,
-    pub size: usize,
     pub span: Span,
+}
+
+impl Ty {
+    pub fn size(&self) -> usize {
+        match &self.kind {
+            TyKind::Lit(l) => l.size(),
+            TyKind::Fn(f) => f.ret.size(),
+            TyKind::UserDefined(_) => usize::MAX,
+            TyKind::Unspecified => usize::MAX,
+        }
+    }
 }
 
 impl AstNode for Ty {
@@ -425,8 +435,7 @@ pub enum LitTy {
 impl LitTy {
     pub fn size(&self) -> usize {
         match self {
-            LitTy::Uint(UintTy::U32) => 4,
-            LitTy::Uint(UintTy::Usize) => std::mem::size_of::<usize>(),
+            LitTy::Uint(uint) => uint.size(),
             LitTy::Bool => 1,
             LitTy::Unit => 0,
             LitTy::Unresolved => usize::MAX,
@@ -440,6 +449,15 @@ pub enum UintTy {
     U32,
     /// An unsigned integer the size of a pointer for the target architecture.
     Usize,
+}
+
+impl UintTy {
+    pub fn size(&self) -> usize {
+        match self {
+            UintTy::U32 => 4,
+            UintTy::Usize => std::mem::size_of::<usize>(),
+        }
+    }
 }
 
 impl Display for UintTy {

@@ -116,7 +116,6 @@ mod test {
                                 ty: Ty {
                                     kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                                     span: Span::new(18, 23),
-                                    size: 8,
                                 },
                                 span: Span::new(15, 23),
                             },
@@ -128,7 +127,6 @@ mod test {
                                 ty: Ty {
                                     kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                                     span: Span::new(28, 31),
-                                    size: 4,
                                 },
                                 span: Span::new(25, 31),
                             }
@@ -138,7 +136,6 @@ mod test {
                     return_ty: Ty {
                         kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                         span: Span::new(34, 37),
-                        size: 4,
                     },
                     body: None,
                     span: Span::new(0, 38),
@@ -177,7 +174,6 @@ mod test {
                 },
                 return_ty: Ty {
                     kind: TyKind::Unspecified,
-                    size: 0,
                     span: Span::new(10, 10)
                 },
                 body: Some(Block {
@@ -188,8 +184,7 @@ mod test {
                         },
                         ty: Ty {
                             kind: TyKind::Unspecified,
-                            size: 0,
-                            span: Span::new(30, 30)
+                           span: Span::new(30, 30)
                         },
                         expr: Some(Expr::Lit(Lit {
                             value: LitVal::Int(IntLit { value: 5 }),

@@ -131,7 +131,7 @@ impl crate::Ir {
             }
             Expr::Call(call) => {
                 let call = self.traverse_call_expression(call, scope)?;
-                let size = call.ty.ret.size;
+                let size = call.ty.ret.size();
                 let temp = Lvalue::Temp(self.alloc_temp(size, scope));
 
                 self.current_block_mut().statements.push(Statement {

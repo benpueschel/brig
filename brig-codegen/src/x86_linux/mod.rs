@@ -283,7 +283,7 @@ impl X86Linux {
         }
 
         // TODO: get return type and size, check how that changes the abi
-        (call.ty.ret.size, Expression::Register(scratch::RAX))
+        (call.ty.ret.size(), Expression::Register(scratch::RAX))
     }
 
     fn process_register_node(&mut self, node: RegisterNode) -> Expression {

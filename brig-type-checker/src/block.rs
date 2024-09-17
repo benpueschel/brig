@@ -17,14 +17,12 @@ impl TypeChecker {
                 Stmt::Expr(e) => self.check_expression(e, ty)?,
                 _ => Ty {
                     kind: TyKind::Lit(LitTy::Unit),
-                    size: 0,
                     span: stmt.span(),
                 },
             }
         } else {
             Ty {
                 kind: TyKind::Lit(LitTy::Unit),
-                size: 0,
                 span: block.span(),
             }
         };
@@ -49,7 +47,6 @@ mod test {
             },
             ty: Ty {
                 kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
-                size: 8,
                 span: Span::with_len(7, 5),
             },
             expr: Some(Expr::Block(Block {
@@ -61,7 +58,6 @@ mod test {
                         },
                         ty: Ty {
                             kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
-                            size: 8,
                             span: Span::with_len(17, 5),
                         },
                         expr: Some(Expr::Lit(Lit {
@@ -106,7 +102,6 @@ mod test {
             },
             ty: Ty {
                 kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
-                size: 8,
                 span: Span::with_len(7, 5),
             },
             expr: Some(Expr::Block(Block {

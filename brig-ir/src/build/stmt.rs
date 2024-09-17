@@ -1,8 +1,8 @@
-use brig_ast::{AstNode, Expr, LetDecl, LitTy, ReturnStmt};
+use brig_ast::{AstNode, Expr, LetDecl, ReturnStmt};
 use brig_diagnostic::{Error, Result};
 
 use crate::{
-    resolve, Lvalue, Operand, OperandKind, Scope, Statement, StatementKind, Terminator, Var,
+    resolve, Lvalue, Operand, Scope, Statement, StatementKind, Terminator, Var,
     VarDecl,
 };
 
@@ -44,7 +44,7 @@ impl crate::Ir {
 
         let var = Var {
             ident: data.name,
-            size: data.ty.size,
+            size: data.ty.size(),
             id,
         };
 

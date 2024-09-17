@@ -74,7 +74,6 @@ mod test {
             },
             ty: Ty {
                 kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
-                size: 4,
                 span: Span::new(7, 9),
             },
             expr: Some(Expr::Lit(Lit {

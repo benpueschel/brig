@@ -125,7 +125,6 @@ impl Parser {
         if !matches!(self.peek()?.kind, TokenKind::Colon) {
             return Ok(Ty {
                 kind: TyKind::Unspecified,
-                size: 0,
                 span: Span::with_len(self.peek()?.span.start, 0),
             });
         }
@@ -136,13 +135,13 @@ impl Parser {
             TokenKind::Identifier(_) => {
                 let ident = ident_from_token(self.eat()?)?;
                 let span = ident.span;
-                let (size, kind) = match (*ident.name.clone().as_str()).as_str() {
-                    "u32" => (4, TyKind::Lit(LitTy::Uint(UintTy::U32))),
-                    "usize" => (8, TyKind::Lit(LitTy::Uint(UintTy::Usize))),
-                    "bool" => (1, TyKind::Lit(LitTy::Bool)),
-                    _ => (0, TyKind::UserDefined(ident)),
+                let kind = match (*ident.name.clone().as_str()).as_str() {
+                    "u32" => TyKind::Lit(LitTy::Uint(UintTy::U32)),
+                    "usize" => TyKind::Lit(LitTy::Uint(UintTy::Usize)),
+                    "bool" => TyKind::Lit(LitTy::Bool),
+                    _ => TyKind::UserDefined(ident),
                 };
-                Ok(Ty { kind, span, size })
+                Ok(Ty { kind, span })
             }
             _ => Err(expected_ident(&token)),
         }
@@ -165,7 +164,6 @@ mod test {
             Ty {
                 kind: TyKind::Unspecified,
                 span: Span::new(0, 0),
-                size: 0,
             }
         );
     }
@@ -181,7 +179,6 @@ mod test {
             Ty {
                 kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                 span: Span::new(2, 7),
-                size: 8,
             }
         );
     }
@@ -197,7 +194,6 @@ mod test {
             Ty {
                 kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
                 span: Span::new(2, 5),
-                size: 4,
             }
         );
     }
@@ -216,7 +212,6 @@ mod test {
                     span: Span::new(2, 8),
                 }),
                 span: Span::new(2, 8),
-                size: 0,
             }
         );
     }
