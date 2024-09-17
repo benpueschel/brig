@@ -40,6 +40,11 @@ fn resolve_symbols_in_block(ir: &mut Ir, block: BasicBlock) {
 }
 fn resolve_symbols_in_statement(ir: &mut Ir, statement: &mut Statement, scope: Scope) {
     match &mut statement.kind {
+        StatementKind::FunctionCall(call) => {
+            for arg in &mut call.args {
+                resolve_symbols_in_operand(ir, arg, scope);
+            }
+        }
         StatementKind::Assign(lvalue, operand) => {
             resolve_symbols_in_lvalue(ir, lvalue, scope);
             resolve_symbols_in_operand(ir, operand, scope);
@@ -53,7 +58,7 @@ fn resolve_symbols_in_statement(ir: &mut Ir, statement: &mut Statement, scope: S
 fn resolve_symbols_in_rvalue(ir: &mut Ir, rvalue: &mut Rvalue, scope: Scope) {
     match rvalue {
         Rvalue::Variable(var) => resolve_symbol(ir, var, scope),
-        Rvalue::IntegerLit(_) => {}
+        Rvalue::IntegerLit(_, _) => {}
         Rvalue::Temp(_) => {}
         Rvalue::BinaryExpr(_, lhs, rhs) => {
             resolve_symbols_in_operand(ir, lhs, scope);
@@ -81,7 +86,7 @@ fn resolve_symbols_in_operand(ir: &mut Ir, operand: &mut Operand, scope: Scope) 
             resolve_symbols_in_lvalue(ir, lvalue, scope);
         }
         OperandKind::Unit => {}
-        OperandKind::IntegerLit(_) => {}
+        OperandKind::IntegerLit(_, _) => {}
         OperandKind::FunctionCall(call) => {
             for arg in &mut call.args {
                 resolve_symbols_in_operand(ir, arg, scope);

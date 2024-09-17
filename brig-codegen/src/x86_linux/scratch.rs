@@ -48,7 +48,7 @@ impl From<TempVal> for RegisterNode {
 pub struct RegisterGraph {
     nodes: HashMap<RegisterNode, RegisterNodeData>,
     scratch: ScratchRegisters,
-    stack_offset: i64,
+    pub stack_offset: i64,
 }
 
 pub struct RegisterNodeData {
@@ -107,6 +107,11 @@ impl RegisterGraph {
         for i in 0..block.statements.len() {
             let stmt = &block.statements[i];
             match &stmt.kind {
+                StatementKind::FunctionCall(call) => {
+                    for arg in &call.args {
+                        self.process_operand(arg);
+                    }
+                }
                 StatementKind::Assign(lhs, operand) => {
                     self.process_lvalue(lhs);
                     self.process_operand(operand);
@@ -174,7 +179,7 @@ impl RegisterGraph {
                 self.process_operand(lhs);
                 self.process_operand(rhs);
             }
-            Rvalue::IntegerLit(_) => {}
+            Rvalue::IntegerLit(_, _) => {}
             Rvalue::Unit => {}
             Rvalue::Call(call) => {
                 for arg in &call.args {
@@ -191,7 +196,7 @@ impl RegisterGraph {
         match &operand.kind {
             OperandKind::Consume(lvalue) => self.process_lvalue(lvalue),
             OperandKind::Unit => {}
-            OperandKind::IntegerLit(_) => {}
+            OperandKind::IntegerLit(_, _) => {}
             OperandKind::FunctionCall(_) => {}
         }
     }

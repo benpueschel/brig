@@ -21,12 +21,14 @@
 //!
 //! Richard Stallman.
 //!
+use std::collections::HashMap;
+
 use assembly_node::{AssemblyNode, Expression, Instruction, JumpCondition};
 use brig_common::sym::Symbol;
 use brig_diagnostic::Result;
 use brig_ir::{
-    BasicBlock, ExprOperator, Ir, Lvalue, Operand, OperandKind, Statement, StatementKind, TempVal,
-    Var, IR_START_BLOCK,
+    BasicBlock, ExprOperator, FunctionCall, Ir, Lvalue, Operand, OperandKind, Statement,
+    StatementKind, TempVal, Var, IR_START_BLOCK,
 };
 use scratch::{Register, RegisterGraph, RegisterNode, ScratchRegisters};
 
@@ -66,6 +68,7 @@ pub struct X86Linux {
     registers: ScratchRegisters,
     register_graph: RegisterGraph,
     pub nodes: Vec<AssemblyNode>,
+    pub labels: HashMap<BasicBlock, Expression>,
     finished_label: Expression,
 
     label_counter: usize,
@@ -77,6 +80,7 @@ impl CodeGenerator for X86Linux {
             registers: ScratchRegisters::new(),
             nodes: vec![],
             finished_label: Expression::None,
+            labels: HashMap::new(),
             label_counter: 0,
             register_graph: RegisterGraph::new(),
             fn_params: vec![],
@@ -117,6 +121,19 @@ impl CodeGenerator for X86Linux {
 
         self.setup_stack_frame();
 
+        let stack_size = self.register_graph.stack_offset.unsigned_abs() as usize;
+        // pad stack_size to 16 bytes
+        let stack_size = (stack_size + 15) & !15;
+
+        if stack_size > 0 {
+            self.nodes.push(AssemblyNode {
+                instruction: Instruction::Sub,
+                size: 8,
+                left: Expression::IntegerLiteral(stack_size),
+                right: Expression::Register(scratch::RSP),
+            });
+        }
+
         for (i, param) in graph.fn_params.iter().enumerate() {
             let var = graph.find_declaration(*param).var.clone();
             let size = var.size;
@@ -138,6 +155,13 @@ impl CodeGenerator for X86Linux {
             size: 0,
             left: self.finished_label.clone(),
             right: Expression::None,
+        });
+
+        self.nodes.push(AssemblyNode {
+            instruction: Instruction::Add,
+            size: 8,
+            left: Expression::IntegerLiteral(stack_size),
+            right: Expression::Register(scratch::RSP),
         });
 
         self.nodes.push(AssemblyNode {
@@ -171,6 +195,10 @@ impl X86Linux {
 
     fn process_statement(&mut self, statement: &Statement) {
         match &statement.kind {
+            StatementKind::FunctionCall(call) => {
+                // Call the function, ignore the return value
+                self.process_function_call(call);
+            }
             StatementKind::Assign(lhs, rhs) => {
                 let (size, right) = self.process_lvalue(lhs);
                 let (lsize, left) = self.process_operand(rhs);
@@ -214,6 +242,50 @@ impl X86Linux {
         self.process_register_node(temp.into())
     }
 
+    fn process_function_call(&mut self, call: &FunctionCall) -> (usize, Expression) {
+        // process a function call based on the system v abi
+
+        let mut stack_offset = 0;
+        for (i, arg) in call.args.iter().enumerate().rev() {
+            let (size, expr) = self.process_operand(arg);
+
+            if i < FN_CALL_REGISTERS.len() {
+                self.nodes.push(AssemblyNode {
+                    instruction: Instruction::Mov,
+                    size,
+                    left: expr,
+                    right: Expression::Register(FN_CALL_REGISTERS[i]),
+                });
+            } else {
+                self.nodes.push(AssemblyNode {
+                    instruction: Instruction::Push,
+                    size,
+                    left: expr,
+                    right: Expression::None,
+                });
+                stack_offset += 8;
+            }
+        }
+        self.nodes.push(AssemblyNode {
+            instruction: Instruction::Call,
+            size: 0,
+            left: Expression::Label(call.name),
+            right: Expression::None,
+        });
+
+        if stack_offset > 0 {
+            self.nodes.push(AssemblyNode {
+                instruction: Instruction::Add,
+                size: 8,
+                left: Expression::IntegerLiteral(stack_offset),
+                right: Expression::Register(scratch::RSP),
+            });
+        }
+
+        // TODO: get return type and size, check how that changes the abi
+        (call.ty.ret.size, Expression::Register(scratch::RAX))
+    }
+
     fn process_register_node(&mut self, node: RegisterNode) -> Expression {
         let node_data = self.register_graph.node_data(node).unwrap_or_else(|| {
             panic!("Node {:?} not found in register graph", node);
@@ -234,52 +306,9 @@ impl X86Linux {
     fn process_operand(&mut self, operand: &Operand) -> (usize, Expression) {
         match &operand.kind {
             OperandKind::Consume(lvalue) => self.process_lvalue(lvalue),
-            OperandKind::IntegerLit(x) => (0, Expression::IntegerLiteral(*x)),
+            OperandKind::FunctionCall(call) => self.process_function_call(call),
+            OperandKind::IntegerLit(size, x) => (*size, Expression::IntegerLiteral(*x)),
             OperandKind::Unit => (0, Expression::None),
-            OperandKind::FunctionCall(call) => {
-                // process a function call based on the system v abi
-
-                let mut stack_offset = 0;
-                for (i, arg) in call.args.iter().enumerate().rev() {
-                    let (size, expr) = self.process_operand(arg);
-
-                    if i < FN_CALL_REGISTERS.len() {
-                        self.nodes.push(AssemblyNode {
-                            instruction: Instruction::Mov,
-                            size,
-                            left: expr,
-                            right: Expression::Register(FN_CALL_REGISTERS[i]),
-                        });
-                    } else {
-                        self.nodes.push(AssemblyNode {
-                            instruction: Instruction::Push,
-                            size,
-                            left: expr,
-                            right: Expression::None,
-                        });
-                        stack_offset += 8;
-                    }
-                }
-
-                self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Call,
-                    size: 0,
-                    left: Expression::Label(call.name),
-                    right: Expression::None,
-                });
-
-                if stack_offset > 0 {
-                    self.nodes.push(AssemblyNode {
-                        instruction: Instruction::Add,
-                        size: 8,
-                        left: Expression::IntegerLiteral(stack_offset),
-                        right: Expression::Register(scratch::RSP),
-                    });
-                }
-
-                // TODO: get return type and size, check how that changes the abi
-                (call.ty.ret.size, Expression::Register(scratch::RAX))
-            }
         }
     }
 

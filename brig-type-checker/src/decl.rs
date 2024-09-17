@@ -1,4 +1,4 @@
-use brig_ast::{Decl, DeclKind, FnTy, FnDecl, Ty, TyKind};
+use brig_ast::{Decl, DeclKind, FnDecl, FnTy, Ty, TyKind};
 use brig_diagnostic::Result;
 
 use crate::TypeChecker;

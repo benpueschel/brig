@@ -81,8 +81,8 @@ impl crate::Ir {
                 Ok(Rvalue::Call(call))
             }
             Expr::Lit(lit) => match lit.value {
-                brig_ast::LitVal::Int(val) => Ok(Rvalue::IntegerLit(val.value)),
-                brig_ast::LitVal::Bool(val) => Ok(Rvalue::IntegerLit(val as usize)),
+                brig_ast::LitVal::Int(val) => Ok(Rvalue::IntegerLit(lit.ty.size(), val.value)),
+                brig_ast::LitVal::Bool(val) => Ok(Rvalue::IntegerLit(lit.ty.size(), val as usize)),
                 brig_ast::LitVal::Unit => Ok(Rvalue::Unit),
             },
             Expr::Bin(expr) => self.traverse_binary_as_rvalue(expr, scope),
@@ -161,11 +161,11 @@ impl crate::Ir {
         match lit.value {
             brig_ast::LitVal::Int(val) => Ok(Some(Operand {
                 size: lit.ty.size(),
-                kind: OperandKind::IntegerLit(val.value),
+                kind: OperandKind::IntegerLit(lit.ty.size(), val.value),
             })),
             brig_ast::LitVal::Bool(val) => Ok(Some(Operand {
                 size: lit.ty.size(),
-                kind: OperandKind::IntegerLit(val as usize),
+                kind: OperandKind::IntegerLit(lit.ty.size(), val as usize),
             })),
             brig_ast::LitVal::Unit => Ok(Some(Operand {
                 size: 0,

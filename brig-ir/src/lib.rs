@@ -90,7 +90,7 @@ impl IndexMut<Scope> for Vec<ScopeData> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct BasicBlock(usize);
 impl BasicBlock {
     pub fn index(&self) -> usize {
@@ -145,6 +145,8 @@ pub struct Statement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StatementKind {
+    /// A function call that does not return a value
+    FunctionCall(FunctionCall),
     Assign(Lvalue, Operand),
     Modify(Lvalue, ExprOperator, Operand),
 }
@@ -165,7 +167,7 @@ pub enum Lvalue {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Rvalue {
-    IntegerLit(usize),
+    IntegerLit(usize, usize),
     Variable(Var),
     Temp(TempVal),
     BinaryExpr(ExprOperator, Operand, Operand),
@@ -211,7 +213,7 @@ pub struct Operand {
 #[derive(Debug, Clone, PartialEq)]
 pub enum OperandKind {
     Consume(Lvalue),
-    IntegerLit(usize),
+    IntegerLit(usize, usize),
     FunctionCall(FunctionCall),
     Unit,
 }
@@ -220,7 +222,7 @@ impl From<OperandKind> for Rvalue {
     fn from(operand: OperandKind) -> Rvalue {
         match operand {
             OperandKind::Consume(lvalue) => lvalue.into(),
-            OperandKind::IntegerLit(value) => Rvalue::IntegerLit(value),
+            OperandKind::IntegerLit(size, value) => Rvalue::IntegerLit(size, value),
             OperandKind::FunctionCall(call) => Rvalue::Call(call),
             OperandKind::Unit => panic!("unit operand is not a valid rvalue"),
         }

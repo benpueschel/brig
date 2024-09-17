@@ -11,9 +11,38 @@ impl X86Linux {
     pub(super) fn process_terminator(&mut self, graph: &mut Ir, terminator: Terminator) {
         match &terminator.kind {
             TerminatorKind::Return { expr } => self.process_return(expr),
-            TerminatorKind::Goto { target } => self.process_basic_block(graph, *target),
+            TerminatorKind::Goto { target } => self.process_goto(graph, *target),
             TerminatorKind::If { condition, targets } => self.process_if(graph, condition, targets),
         }
+    }
+
+    fn process_goto(&mut self, graph: &mut Ir, target: BasicBlock) {
+        let label = self.labels.get(&target);
+        if let Some(label) = label {
+            self.nodes.push(AssemblyNode {
+                instruction: Instruction::Jmp(JumpCondition::None),
+                size: 0,
+                left: label.clone(),
+                right: Expression::None,
+            });
+            return;
+        }
+        let label = self.label_alloc();
+        self.nodes.push(AssemblyNode {
+            instruction: Instruction::Jmp(JumpCondition::None),
+            size: 0,
+            left: label.clone(),
+            right: Expression::None,
+        });
+
+        self.labels.insert(target, label.clone());
+        self.nodes.push(AssemblyNode {
+            instruction: Instruction::LabelDeclaration,
+            size: 0,
+            left: label.clone(),
+            right: Expression::None,
+        });
+        self.process_basic_block(graph, target);
     }
 
     fn process_return(&mut self, expr: &Operand) {
@@ -56,7 +85,7 @@ impl X86Linux {
                     right: operand,
                 });
                 self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Jmp(JumpCondition::Equal),
+                    instruction: Instruction::Jmp(JumpCondition::NotEqual),
                     size: 0,
                     left: then_label.clone(),
                     right: Expression::None,
@@ -74,15 +103,15 @@ impl X86Linux {
                     right: operand,
                 });
                 self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Jmp(JumpCondition::Equal),
+                    instruction: Instruction::Jmp(JumpCondition::NotEqual),
                     size: 0,
                     left: then_label.clone(),
                     right: Expression::None,
                 });
             }
-            Rvalue::IntegerLit(lit) => {
+            Rvalue::IntegerLit(size, lit) => {
                 let (size, operand) = self.process_operand(&Operand {
-                    kind: OperandKind::IntegerLit(*lit),
+                    kind: OperandKind::IntegerLit(*size, *lit),
                     size: 0,
                 });
                 self.nodes.push(AssemblyNode {
@@ -92,7 +121,7 @@ impl X86Linux {
                     right: operand,
                 });
                 self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Jmp(JumpCondition::Equal),
+                    instruction: Instruction::Jmp(JumpCondition::NotEqual),
                     size: 0,
                     left: then_label.clone(),
                     right: Expression::None,

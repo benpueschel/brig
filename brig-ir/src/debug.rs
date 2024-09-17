@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
 use crate::{
-    BasicBlock, ExprOperator, Ir, Lvalue, Operand, OperandKind, Rvalue, Statement, Terminator,
-    TerminatorKind, IR_END_BLOCK, IR_START_BLOCK,
+    BasicBlock, ExprOperator, FunctionCall, Ir, Lvalue, Operand, OperandKind, Rvalue, Statement,
+    Terminator, TerminatorKind, IR_END_BLOCK, IR_START_BLOCK,
 };
 
 impl Display for Ir {
@@ -109,6 +109,9 @@ impl Display for Statement {
             crate::StatementKind::Modify(lhs, op, rhs) => {
                 write!(f, "{} = {} {} {}", lhs, lhs, op, rhs)
             }
+            crate::StatementKind::FunctionCall(call) => {
+                write!(f, "{}", call)
+            }
         }
     }
 }
@@ -116,21 +119,12 @@ impl Display for Statement {
 impl Display for Rvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Rvalue::IntegerLit(int) => write!(f, "{}", int),
+            Rvalue::IntegerLit(_, int) => write!(f, "{}", int),
             Rvalue::Unit => write!(f, "()"),
             Rvalue::Variable(var) => write!(f, "{}", var.ident),
             Rvalue::Temp(temp) => write!(f, "t{}", temp.index),
             Rvalue::BinaryExpr(op, lhs, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
-            Rvalue::Call(call) => write!(
-                f,
-                "{}({})",
-                *call.name.as_str(),
-                call.args
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+            Rvalue::Call(call) => write!(f, "{}", call),
         }
     }
 }
@@ -166,21 +160,27 @@ impl Display for Operand {
     }
 }
 
+impl Display for FunctionCall {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}({})",
+            self.name,
+            self.args
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
 impl Display for OperandKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             OperandKind::Consume(lvalue) => write!(f, "{}", lvalue),
-            OperandKind::IntegerLit(int) => write!(f, "{}", int),
-            OperandKind::FunctionCall(call) => write!(
-                f,
-                "{}({})",
-                call.name,
-                call.args
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+            OperandKind::IntegerLit(_, int) => write!(f, "{}", int),
+            OperandKind::FunctionCall(call) => write!(f, "{}", call),
             OperandKind::Unit => write!(f, "()"),
         }
     }

@@ -1,4 +1,4 @@
-use brig_ast::{AstNode, Expr, LetDecl, ReturnStmt};
+use brig_ast::{AstNode, Expr, LetDecl, LitTy, ReturnStmt};
 use brig_diagnostic::{Error, Result};
 
 use crate::{
@@ -13,24 +13,11 @@ impl crate::Ir {
         match expr {
             Expr::Call(call) => {
                 let call = self.traverse_call_expression(call, scope)?;
-                let size = call.ty.ret.size;
-                let temp = Lvalue::Temp(self.alloc_temp(size, scope));
-
                 self.current_block_mut().statements.push(Statement {
-                    span: call.span,
-                    kind: StatementKind::Assign(
-                        temp.clone(),
-                        Operand {
-                            kind: OperandKind::FunctionCall(call),
-                            size,
-                        },
-                    ),
+                    kind: StatementKind::FunctionCall(call),
+                    span,
                 });
-
-                Ok(Some(Operand {
-                    kind: OperandKind::Consume(temp),
-                    size,
-                }))
+                Ok(None)
             }
             Expr::Block(block) => Ok(self.traverse_block(block, scope, None)?.1),
             Expr::If(if_expr) => self.traverse_if_expression(if_expr, scope),
