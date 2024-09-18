@@ -320,6 +320,7 @@ impl X86Linux {
     ) -> (usize, Expression) {
         match op {
             ExprOperator::Eq => self.process_comparison(JumpCondition::Equal, lhs, rhs),
+            ExprOperator::Ne => self.process_comparison(JumpCondition::NotEqual, lhs, rhs),
             ExprOperator::Gt => self.process_comparison(JumpCondition::Greater, lhs, rhs),
             ExprOperator::Gte => self.process_comparison(JumpCondition::GreaterOrEqual, lhs, rhs),
             ExprOperator::Lt => self.process_comparison(JumpCondition::Less, lhs, rhs),
@@ -403,6 +404,7 @@ impl X86Linux {
             ExprOperator::Mul => Instruction::IMul,
             ExprOperator::Div => Instruction::IDiv,
             ExprOperator::Eq => Instruction::Cmp,
+            ExprOperator::Ne => Instruction::Cmp,
             ExprOperator::Gt => Instruction::Cmp,
             ExprOperator::Gte => Instruction::Cmp,
             ExprOperator::Lt => Instruction::Cmp,

@@ -68,7 +68,8 @@ impl Parser {
     pub fn parse_comparison_expression(&mut self) -> Result<Expr> {
         self.parse_binary_expression(Parser::parse_add_expression, |this| {
             let x = this.peek()?.kind;
-            Ok(x == TokenKind::LeftCaret || x == TokenKind::RightCaret)
+            use TokenKind::*;
+            Ok(matches!(x, Equal | Bang | LeftCaret | RightCaret))
         })
     }
     pub fn parse_add_expression(&mut self) -> Result<Expr> {
@@ -190,6 +191,10 @@ impl Parser {
             (Minus, _) => Ok(BinOp::Sub),
             (Star, _) => Ok(BinOp::Mul),
             (Slash, _) => Ok(BinOp::Div),
+            (Bang, Equal) => {
+                self.eat()?;
+                Ok(BinOp::Ne)
+            }
             (LeftCaret, Equal) => {
                 self.eat()?;
                 Ok(BinOp::Lte)
@@ -208,6 +213,7 @@ impl Parser {
                     TokenKind::Slash.to_str().to_string(),
                     TokenKind::Plus.to_str().to_string(),
                     TokenKind::Minus.to_str().to_string(),
+                    TokenKind::Bang.to_str().to_string(),
                     TokenKind::Equal.to_str().to_string(),
                     TokenKind::LeftCaret.to_str().to_string(),
                     TokenKind::RightCaret.to_str().to_string(),

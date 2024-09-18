@@ -146,6 +146,7 @@ impl Display for ExprOperator {
             ExprOperator::Mul => write!(f, "*"),
             ExprOperator::Div => write!(f, "/"),
             ExprOperator::Eq => write!(f, "=="),
+            ExprOperator::Ne => write!(f, "!="),
             ExprOperator::Gt => write!(f, ">"),
             ExprOperator::Lt => write!(f, "<"),
             ExprOperator::Gte => write!(f, ">="),

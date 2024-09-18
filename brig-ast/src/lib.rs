@@ -270,6 +270,7 @@ pub enum BinOp {
     Mul,
     Div,
     Eq,
+    Ne,
     Lt,
     Gt,
     Lte,
@@ -282,7 +283,7 @@ impl BinOp {
     pub fn is_comparison(&self) -> bool {
         matches!(
             self,
-            BinOp::Eq | BinOp::Lt | BinOp::Gt | BinOp::Lte | BinOp::Gte
+            BinOp::Eq | BinOp::Lt | BinOp::Gt | BinOp::Lte | BinOp::Gte | BinOp::Ne
         )
     }
 }

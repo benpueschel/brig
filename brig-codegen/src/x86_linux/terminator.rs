@@ -205,6 +205,7 @@ impl X86Linux {
     fn get_jump_condition(&self, operator: &ExprOperator) -> Option<JumpCondition> {
         match operator {
             ExprOperator::Eq => Some(JumpCondition::Equal),
+            ExprOperator::Ne => Some(JumpCondition::NotEqual),
             ExprOperator::Gt => Some(JumpCondition::Greater),
             ExprOperator::Gte => Some(JumpCondition::GreaterOrEqual),
             ExprOperator::Lt => Some(JumpCondition::Less),
