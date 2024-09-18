@@ -5,3 +5,7 @@ pub mod position;
 pub use position::Position;
 
 pub mod sym;
+pub use sym::Symbol;
+
+pub mod path;
+pub use path::Path;

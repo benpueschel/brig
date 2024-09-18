@@ -101,18 +101,14 @@ pub(crate) fn make_var_id(scope_index: Scope, var_index: usize) -> u64 {
 
 pub(crate) fn resolve_var(ir: &mut Ir, ident: Ident, scope_index: Scope) -> Option<Var> {
     let scope = ir.scope_data_mut(scope_index);
-    let mut var = Var {
-        id: 0,
-        size: 0,
-        ident: ident.clone(),
-    };
-
     for i in 0..scope.var_decls.len() {
         let var_decl = &mut scope.var_decls[i].var;
         if var_decl.ident.name == ident.name {
-            var.id = var_decl.id;
-            var.size = var_decl.size;
-            return Some(var);
+            return Some(Var {
+                ident: var_decl.ident.clone(),
+                id: var_decl.id,
+                ty: var_decl.ty,
+            });
         }
     }
     // if we didn't find the symbol in this scope, try the parent scope

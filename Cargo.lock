@@ -80,6 +80,7 @@ dependencies = [
  "brig-ir",
  "brig-lexer",
  "brig-parser",
+ "brig-ty",
  "brig-type-checker",
  "clap",
 ]
@@ -104,6 +105,9 @@ dependencies = [
 [[package]]
 name = "brig-common"
 version = "0.0.1"
+dependencies = [
+ "thin-vec",
+]
 
 [[package]]
 name = "brig-diagnostic"
@@ -120,6 +124,7 @@ dependencies = [
  "brig-ast",
  "brig-common",
  "brig-diagnostic",
+ "brig-ty",
 ]
 
 [[package]]
@@ -158,6 +163,7 @@ dependencies = [
  "brig-ast",
  "brig-common",
  "brig-diagnostic",
+ "thin-vec",
 ]
 
 [[package]]

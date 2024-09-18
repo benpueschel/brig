@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-use brig_common::{sym::Symbol, Span};
+use brig_common::{sym::Symbol, Path, Span};
 use thin_vec::ThinVec;
 
 pub trait AstNode {
@@ -364,7 +364,8 @@ impl Ty {
         match &self.kind {
             TyKind::Lit(l) => l.size(),
             TyKind::Fn(f) => f.ret.size(),
-            TyKind::UserDefined(_) => usize::MAX,
+            TyKind::Adt(_) => usize::MAX,
+            TyKind::Ident(_) => usize::MAX,
             TyKind::Unspecified => usize::MAX,
         }
     }
@@ -380,18 +381,52 @@ impl AstNode for Ty {
 pub enum TyKind {
     /// A literal type, like a u32.
     Lit(LitTy),
-    /// A user-defined type.
-    UserDefined(Ident),
+    /// An algebraic data type.
+    Adt(Adt),
     /// A function type.
     Fn(FnTy),
+    Ident(Path),
     /// A type the user didn't specify.
     Unspecified,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Adt {
+    Struct(Struct),
+}
+
+impl AstNode for Adt {
+    fn span(&self) -> Span {
+        match self {
+            Adt::Struct(s) => s.fields[0].ty.span(),
+        }
+    }
+}
+
+impl Display for Adt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Adt::Struct(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Struct {
+    pub name: Symbol,
+    pub fields: ThinVec<Field>,
+}
+
+impl Display for Struct {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", *self.name.as_str())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct FnTy {
     pub name: Symbol,
-    pub args: ThinVec<Ty>,
+    pub args: ThinVec<Field>,
     pub ret: Box<Ty>,
     pub span: Span,
 }
@@ -400,6 +435,12 @@ pub struct FnTy {
 pub struct Field {
     pub name: Symbol,
     pub ty: Ty,
+}
+
+impl Display for Field {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", *self.name.as_str(), self.ty.kind)
+    }
 }
 
 impl Display for TyKind {
@@ -411,12 +452,13 @@ impl Display for TyKind {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", arg.kind)?;
+                    write!(f, "{}", arg)?;
                 }
                 write!(f, "): {}", func.ret.kind)
             }
             TyKind::Lit(l) => write!(f, "{}", l),
-            TyKind::UserDefined(ident) => write!(f, "{}", *ident.name.as_str()),
+            TyKind::Adt(path) => write!(f, "{}", path),
+            TyKind::Ident(path) => write!(f, "{}", path),
             TyKind::Unspecified => write!(f, "unspecified"),
         }
     }

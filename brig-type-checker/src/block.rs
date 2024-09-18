@@ -5,7 +5,6 @@ use crate::TypeChecker;
 
 impl TypeChecker {
     pub fn check_block(&mut self, block: &mut Block, ty: Option<&Ty>) -> Result<Ty> {
-        self.push_scope();
         for stmt in &mut block.stmts {
             self.check_statement(stmt, None)?;
         }
@@ -26,7 +25,6 @@ impl TypeChecker {
                 span: block.span(),
             }
         };
-        self.pop_scope();
         Ok(ty)
     }
 }

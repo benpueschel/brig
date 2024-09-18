@@ -46,11 +46,11 @@ impl X86Linux {
     }
 
     fn process_return(&mut self, expr: &Operand) {
-        let (size, operand) = self.process_operand(expr);
+        let operand = self.process_operand(expr);
         if operand != Expression::None {
             self.nodes.push(AssemblyNode {
                 instruction: Instruction::Mov,
-                size,
+                size: expr.ty.get().size(),
                 left: operand,
                 right: Expression::Register(scratch::RAX),
             });
@@ -74,13 +74,13 @@ impl X86Linux {
         match condition {
             Rvalue::Call(_call) => todo!("process call in if condition"),
             Rvalue::Temp(temp) => {
-                let (size, operand) = self.process_operand(&Operand {
+                let operand = self.process_operand(&Operand {
                     kind: OperandKind::Consume(Lvalue::Temp(*temp)),
-                    size: temp.size(),
+                    ty: temp.ty,
                 });
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Cmp,
-                    size,
+                    size: temp.ty.get().size(),
                     left: Expression::IntegerLiteral(0),
                     right: operand,
                 });
@@ -92,13 +92,13 @@ impl X86Linux {
                 });
             }
             Rvalue::Variable(var) => {
-                let (size, operand) = self.process_operand(&Operand {
+                let operand = self.process_operand(&Operand {
                     kind: OperandKind::Consume(Lvalue::Variable(var.clone())),
-                    size: var.size,
+                    ty: var.ty,
                 });
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Cmp,
-                    size,
+                    size: var.ty.get().size(),
                     left: Expression::IntegerLiteral(0),
                     right: operand,
                 });
@@ -109,14 +109,14 @@ impl X86Linux {
                     right: Expression::None,
                 });
             }
-            Rvalue::IntegerLit(size, lit) => {
-                let (size, operand) = self.process_operand(&Operand {
-                    kind: OperandKind::IntegerLit(*size, *lit),
-                    size: 0,
+            Rvalue::IntegerLit(ty, lit) => {
+                let operand = self.process_operand(&Operand {
+                    kind: OperandKind::IntegerLit(*ty, *lit),
+                    ty: *ty,
                 });
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Cmp,
-                    size,
+                    size: ty.get().size(),
                     left: Expression::IntegerLiteral(0),
                     right: operand,
                 });
@@ -130,9 +130,10 @@ impl X86Linux {
             Rvalue::Unit => panic!("unit rvalue in if condition"),
             Rvalue::BinaryExpr(op, lhs, rhs) => {
                 if let Some(condition) = self.get_jump_condition(op) {
-                    let (size, left) = self.process_operand(rhs);
-                    let (rsize, right) = self.process_operand(lhs);
-                    let size = size.max(rsize);
+                    let left = self.process_operand(rhs);
+                    let right = self.process_operand(lhs);
+                    debug_assert_eq!(lhs.ty, rhs.ty);
+                    let size = lhs.ty.get().size();
 
                     let right = match right {
                         Expression::Register(x) => Expression::Register(x),

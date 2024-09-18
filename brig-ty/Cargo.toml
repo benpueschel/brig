@@ -7,3 +7,4 @@ edition.workspace = true
 brig-common = { path = "../brig-common" }
 brig-diagnostic = { path = "../brig-diagnostic" }
 brig-ast = { path = "../brig-ast" }
+thin-vec = "0.2.13"

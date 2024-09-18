@@ -117,11 +117,15 @@ impl TypeChecker {
                         ))
                     }
                 }
-                TyKind::UserDefined(u_ty) => {
+                TyKind::Ident(path) => Err(Error::type_mismatch(
+                    (ty.kind.to_string(), ty.span),
+                    (path.to_string(), lit.span),
+                )),
+                TyKind::Adt(u_ty) => {
                     // TODO: check some stuff about u_ty
                     Err(Error::type_mismatch(
                         (ty.kind.to_string(), ty.span),
-                        (u_ty.name.to_string(), u_ty.span),
+                        (u_ty.to_string(), u_ty.span()),
                     ))
                 }
                 TyKind::Fn(fn_ty) => Err(Error::type_mismatch(
@@ -181,8 +185,8 @@ impl TypeChecker {
             ));
         }
         // Check if the arguments match the expected types
-        for (arg, ty) in call.args.iter_mut().zip(fn_ty.args.iter()) {
-            self.check_expression(arg, Some(ty))?;
+        for (arg, field) in call.args.iter_mut().zip(fn_ty.args.iter()) {
+            self.check_expression(arg, Some(&field.ty))?;
         }
 
         call.fn_ty = Some(fn_ty.clone());

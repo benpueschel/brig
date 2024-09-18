@@ -2,7 +2,7 @@
 //! into an abstract syntax tree, encoding the structure of the program.
 
 use brig_ast::*;
-use brig_common::Span;
+use brig_common::{path, Span};
 use brig_diagnostic::{Error, Result};
 use brig_lexer::{Lexer, Token, TokenKind};
 use brig_macros::verify_token;
@@ -135,12 +135,14 @@ impl Parser {
         match &token.kind {
             TokenKind::Identifier(_) => {
                 let ident = ident_from_token(self.eat()?)?;
-                let span = ident.span;
-                let kind = match (*ident.name.clone().as_str()).as_str() {
+                let path = path!(ident.span, ident.name);
+                let span = path.span;
+
+                let kind = match path.to_string().as_str() {
                     "u32" => TyKind::Lit(LitTy::Uint(UintTy::U32)),
                     "usize" => TyKind::Lit(LitTy::Uint(UintTy::Usize)),
                     "bool" => TyKind::Lit(LitTy::Bool),
-                    _ => TyKind::UserDefined(ident),
+                    _ => TyKind::Ident(path),
                 };
                 Ok(Ty { kind, span })
             }
@@ -151,7 +153,8 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
-    use brig_common::sym::Symbol;
+    use brig_common::sym;
+    use thin_vec::thin_vec;
 
     use crate::*;
     #[test]
@@ -208,10 +211,7 @@ mod test {
         assert_eq!(
             ty,
             Ty {
-                kind: TyKind::UserDefined(Ident {
-                    name: Symbol::intern("MyType"),
-                    span: Span::new(2, 8),
-                }),
+                kind: TyKind::Ident(path!(Span::new(2, 8), sym!("MyType"))),
                 span: Span::new(2, 8),
             }
         );

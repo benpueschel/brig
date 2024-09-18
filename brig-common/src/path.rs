@@ -1,18 +1,36 @@
-use crate::Symbol;
+use std::fmt::Display;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+use thin_vec::ThinVec;
+
+use crate::{Span, Symbol};
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Path {
-    pub segments: Vec<Symbol>,
+    pub segments: ThinVec<Symbol>,
+    pub span: Span,
+}
+
+impl Display for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.segments
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join("::")
+        )
+    }
 }
 
 #[macro_export]
 macro_rules! path {
-    () => {
-        $crate::Path { segments: vec![] }
-    };
-    ($($segment:expr),+ $(,)?) => {
+    ($span:expr, $($segment:expr),+ $(,)?) => {{
+        use ::thin_vec::thin_vec;
         $crate::Path {
-            segments: vec![$($segment),+],
-        }
+            segments: thin_vec![$($segment),+],
+            span: $span,
+        }}
     };
 }

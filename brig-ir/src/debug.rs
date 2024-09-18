@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     BasicBlock, ExprOperator, FunctionCall, Ir, Lvalue, Operand, OperandKind, Rvalue, Statement,
-    Terminator, TerminatorKind, IR_END_BLOCK, IR_START_BLOCK,
+    Terminator, TerminatorKind, Var, IR_END_BLOCK, IR_START_BLOCK,
 };
 
 impl Display for Ir {
@@ -12,7 +12,7 @@ impl Display for Ir {
             .iter()
             .map(|p| {
                 let var = &self.find_declaration(*p).var;
-                format!("{}: TODO TYPE ({} bytes)", var.ident, var.size)
+                format!("{}", var)
             })
             .collect::<Vec<_>>();
 
@@ -23,13 +23,9 @@ impl Display for Ir {
             if i != 0 {
                 writeln!(f, "{indent}scope {} {{", i)?;
             }
-            s.var_decls.iter().try_for_each(|d| {
-                writeln!(
-                    f,
-                    "{indent}    let {}: TODO TYPE ({} bytes)",
-                    d.var.ident, d.var.size
-                )
-            })?;
+            s.var_decls
+                .iter()
+                .try_for_each(|d| writeln!(f, "{indent}    let {}", d.var))?;
 
             s.temp_decls
                 .iter()
@@ -67,6 +63,12 @@ impl Display for Ir {
         }
 
         writeln!(f, "}}")
+    }
+}
+
+impl Display for Var {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.ident, *self.ty.get())
     }
 }
 

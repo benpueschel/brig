@@ -59,16 +59,18 @@ impl IrBuilder {
         });
 
         for (i, param) in self.decl.parameters.iter().enumerate() {
-            let var_id = crate::resolve::make_var_id(fn_scope, i);
+            let id = crate::resolve::make_var_id(fn_scope, i);
+            let ty = brig_ty::resolve::parse_ast_ty(&param.ty)?;
+
             ir.scope_data_mut(fn_scope).var_decls.push(VarDecl {
                 scope: fn_scope,
                 var: Var {
                     ident: param.ident.clone(),
-                    size: param.ty.size(),
-                    id: var_id,
+                    id,
+                    ty,
                 },
             });
-            ir.fn_params.push(var_id);
+            ir.fn_params.push(id);
         }
 
         let (first_block, return_op) = ir.traverse_block(body, fn_scope, Some(IR_START_BLOCK))?;

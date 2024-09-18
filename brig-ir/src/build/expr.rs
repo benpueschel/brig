@@ -38,9 +38,10 @@ impl crate::Ir {
                 expr.span,
             )
         })?;
-        let size = left.size.max(right.size);
+        debug_assert_eq!(left.ty, right.ty);
+        let ty = left.ty;
 
-        let temp = Lvalue::Temp(self.alloc_temp(size, scope));
+        let temp = Lvalue::Temp(self.alloc_temp(ty, scope));
         self.current_block_mut().statements.push(Statement {
             span: expr.span,
             kind: StatementKind::Assign(temp.clone(), left),
@@ -50,8 +51,8 @@ impl crate::Ir {
             kind: StatementKind::Modify(temp.clone(), expr.op.into(), right),
         });
         Ok(Some(Operand {
-            size,
             kind: OperandKind::Consume(temp),
+            ty,
         }))
     }
 
@@ -81,8 +82,14 @@ impl crate::Ir {
                 Ok(Rvalue::Call(call))
             }
             Expr::Lit(lit) => match lit.value {
-                brig_ast::LitVal::Int(val) => Ok(Rvalue::IntegerLit(lit.ty.size(), val.value)),
-                brig_ast::LitVal::Bool(val) => Ok(Rvalue::IntegerLit(lit.ty.size(), val as usize)),
+                brig_ast::LitVal::Int(val) => Ok(Rvalue::IntegerLit(
+                    brig_ty::resolve::parse_lit_ast_ty(&lit.ty)?,
+                    val.value,
+                )),
+                brig_ast::LitVal::Bool(val) => Ok(Rvalue::IntegerLit(
+                    brig_ty::resolve::parse_lit_ast_ty(&lit.ty)?,
+                    val as usize,
+                )),
                 brig_ast::LitVal::Unit => Ok(Rvalue::Unit),
             },
             Expr::Bin(expr) => self.traverse_binary_as_rvalue(expr, scope),
@@ -108,7 +115,7 @@ impl crate::Ir {
             }
             Expr::Block(block) => {
                 let (_block, op) = self.traverse_block(block, scope, None)?;
-                Ok(op.map_or(Rvalue::Unit, |op| op.kind.into()))
+                Ok(op.map_or(Rvalue::Unit, |op| op.into()))
             }
             Expr::If(if_expr) => self.traverse_rvalue(*if_expr.cond, scope),
         }
@@ -131,8 +138,8 @@ impl crate::Ir {
             }
             Expr::Call(call) => {
                 let call = self.traverse_call_expression(call, scope)?;
-                let size = call.ty.ret.size();
-                let temp = Lvalue::Temp(self.alloc_temp(size, scope));
+                let ty = brig_ty::resolve::parse_ast_ty(&call.ty.ret)?;
+                let temp = Lvalue::Temp(self.alloc_temp(ty, scope));
 
                 self.current_block_mut().statements.push(Statement {
                     span: call.span,
@@ -140,14 +147,14 @@ impl crate::Ir {
                         temp.clone(),
                         Operand {
                             kind: OperandKind::FunctionCall(call),
-                            size,
+                            ty,
                         },
                     ),
                 });
 
                 Ok(Some(Operand {
                     kind: OperandKind::Consume(temp),
-                    size,
+                    ty,
                 }))
             }
             Expr::Block(block) => self.traverse_block(block, scope, None).map(|x| x.1),
@@ -158,18 +165,19 @@ impl crate::Ir {
     }
 
     pub fn traverse_literal(&mut self, lit: brig_ast::Lit) -> Res {
+        let ty = brig_ty::resolve::parse_lit_ast_ty(&lit.ty)?;
         match lit.value {
             brig_ast::LitVal::Int(val) => Ok(Some(Operand {
-                size: lit.ty.size(),
-                kind: OperandKind::IntegerLit(lit.ty.size(), val.value),
+                kind: OperandKind::IntegerLit(ty, val.value),
+                ty,
             })),
             brig_ast::LitVal::Bool(val) => Ok(Some(Operand {
-                size: lit.ty.size(),
-                kind: OperandKind::IntegerLit(lit.ty.size(), val as usize),
+                kind: OperandKind::IntegerLit(ty, val as usize),
+                ty,
             })),
             brig_ast::LitVal::Unit => Ok(Some(Operand {
-                size: 0,
                 kind: OperandKind::Unit,
+                ty,
             })),
         }
     }
@@ -182,7 +190,7 @@ impl crate::Ir {
             )
         })?;
         Ok(Some(Operand {
-            size: var.size,
+            ty: var.ty,
             kind: OperandKind::Consume(Lvalue::Variable(var)),
         }))
     }
@@ -193,16 +201,18 @@ impl crate::Ir {
         let current = self.current_block_id();
         let target = self.alloc_empty_basic_block(scope);
 
-        let mut op = self.alloc_temp(0, scope);
+        let mut op = None;
         let (then_block, then_op) =
             self.traverse_block(if_expr.then_block, scope, Some(current))?;
         if let Some(then_op) = &then_op {
-            op = self.alloc_temp(then_op.size, scope);
+            op = Some(self.alloc_temp(then_op.ty, scope));
+            let op = Lvalue::Temp(op.unwrap());
             self.current_block_mut().statements.push(Statement {
                 span: if_expr.span,
-                kind: StatementKind::Assign(Lvalue::Temp(op), then_op.clone()),
+                kind: StatementKind::Assign(op, then_op.clone()),
             });
         }
+        let op = op.expect("then block must return a value");
 
         // Terminator for the last block of the then branch, point to the target block
         self.current_block_mut().terminator = Some(Terminator {
@@ -252,7 +262,7 @@ impl crate::Ir {
         });
 
         Ok(Some(Operand {
-            size: then_op.map_or(0, |op| op.size),
+            ty: op.ty,
             kind: OperandKind::Consume(Lvalue::Temp(op)),
         }))
     }
@@ -284,11 +294,11 @@ impl crate::Ir {
         })
     }
 
-    pub fn alloc_temp(&mut self, size: usize, scope: Scope) -> TempVal {
+    pub fn alloc_temp(&mut self, ty: brig_ty::TyIdx, scope: Scope) -> TempVal {
         let data = self.scope_data_mut(scope);
         data.temp_decls.push(TempDecl { scope });
         TempVal {
-            size,
+            ty,
             index: data.temp_decls.len() as u64 - 1,
         }
     }

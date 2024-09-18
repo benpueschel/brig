@@ -136,7 +136,7 @@ impl CodeGenerator for X86Linux {
 
         for (i, param) in graph.fn_params.iter().enumerate() {
             let var = graph.find_declaration(*param).var.clone();
-            let size = var.size;
+            let size = var.ty.get().size();
             let expr = self.process_variable(var);
             if i < FN_CALL_REGISTERS.len() {
                 self.nodes.push(AssemblyNode {
@@ -200,26 +200,27 @@ impl X86Linux {
                 self.process_function_call(call);
             }
             StatementKind::Assign(lhs, rhs) => {
-                let (size, right) = self.process_lvalue(lhs);
-                let (lsize, left) = self.process_operand(rhs);
-                let size = size.max(lsize);
+                let right = self.process_lvalue(lhs);
+                let left = self.process_operand(rhs);
+                debug_assert_eq!(lhs.ty(), rhs.ty);
+                let ty = rhs.ty;
 
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Mov,
-                    size,
                     left,
                     right,
+                    size: ty.get().size(),
                 });
             }
             StatementKind::Modify(lhs, op, rhs) => {
-                let (size, right) = self.process_lvalue(lhs);
-                let (lsize, left) = self.process_operand(rhs);
-                let size = size.max(lsize);
+                let right = self.process_lvalue(lhs);
+                let left = self.process_operand(rhs);
+                debug_assert_eq!(lhs.ty(), rhs.ty);
 
                 let instruction = self.get_instruction(op);
                 self.nodes.push(AssemblyNode {
                     instruction,
-                    size,
+                    size: rhs.ty.get().size(),
                     left,
                     right,
                 });
@@ -227,10 +228,10 @@ impl X86Linux {
         }
     }
 
-    fn process_lvalue(&mut self, lvalue: &Lvalue) -> (usize, Expression) {
+    fn process_lvalue(&mut self, lvalue: &Lvalue) -> Expression {
         match lvalue {
-            Lvalue::Variable(var) => (var.size, self.process_variable(var.clone())),
-            Lvalue::Temp(temp) => (temp.size(), self.process_temp(*temp)),
+            Lvalue::Variable(var) => self.process_variable(var.clone()),
+            Lvalue::Temp(temp) => self.process_temp(*temp),
         }
     }
 
@@ -242,24 +243,24 @@ impl X86Linux {
         self.process_register_node(temp.into())
     }
 
-    fn process_function_call(&mut self, call: &FunctionCall) -> (usize, Expression) {
+    fn process_function_call(&mut self, call: &FunctionCall) -> Expression {
         // process a function call based on the system v abi
 
         let mut stack_offset = 0;
         for (i, arg) in call.args.iter().enumerate().rev() {
-            let (size, expr) = self.process_operand(arg);
+            let expr = self.process_operand(arg);
 
             if i < FN_CALL_REGISTERS.len() {
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Mov,
-                    size,
+                    size: arg.ty.get().size(),
                     left: expr,
                     right: Expression::Register(FN_CALL_REGISTERS[i]),
                 });
             } else {
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Push,
-                    size,
+                    size: arg.ty.get().size(),
                     left: expr,
                     right: Expression::None,
                 });
@@ -283,7 +284,7 @@ impl X86Linux {
         }
 
         // TODO: get return type and size, check how that changes the abi
-        (call.ty.ret.size(), Expression::Register(scratch::RAX))
+        Expression::Register(scratch::RAX)
     }
 
     fn process_register_node(&mut self, node: RegisterNode) -> Expression {
@@ -303,12 +304,12 @@ impl X86Linux {
         }
     }
 
-    fn process_operand(&mut self, operand: &Operand) -> (usize, Expression) {
+    fn process_operand(&mut self, operand: &Operand) -> Expression {
         match &operand.kind {
             OperandKind::Consume(lvalue) => self.process_lvalue(lvalue),
             OperandKind::FunctionCall(call) => self.process_function_call(call),
-            OperandKind::IntegerLit(size, x) => (*size, Expression::IntegerLiteral(*x)),
-            OperandKind::Unit => (0, Expression::None),
+            OperandKind::IntegerLit(_ty, x) => Expression::IntegerLiteral(*x),
+            OperandKind::Unit => Expression::None,
         }
     }
 
@@ -338,17 +339,18 @@ impl X86Linux {
         lhs: Operand,
         rhs: Operand,
     ) -> (usize, Expression) {
-        let (size, lhs) = self.process_operand(&lhs);
-        let (lsize, rhs) = self.process_operand(&rhs);
-        let size = size.max(lsize);
+        let left = self.process_operand(&lhs);
+        let right = self.process_operand(&rhs);
+        debug_assert_eq!(lhs.ty, rhs.ty);
+        let size = lhs.ty.get().size();
 
         self.nodes.push(AssemblyNode {
             instruction: instr,
             size,
-            left: lhs,
-            right: rhs.clone(),
+            left,
+            right: right.clone(),
         });
-        (size, rhs)
+        (size, right)
     }
 
     fn process_comparison(
@@ -357,23 +359,24 @@ impl X86Linux {
         lhs: Operand,
         rhs: Operand,
     ) -> (usize, Expression) {
-        let (size, lhs) = self.process_operand(&lhs);
-        let (lsize, rhs) = self.process_operand(&rhs);
-        let size = size.max(lsize);
+        let left = self.process_operand(&lhs);
+        let right = self.process_operand(&rhs);
+        debug_assert_eq!(lhs.ty, rhs.ty);
+        let size = lhs.ty.get().size();
 
         self.nodes.push(AssemblyNode {
             instruction: Instruction::Cmp,
             size,
-            left: lhs,
-            right: rhs.clone(),
+            left,
+            right: right.clone(),
         });
         self.nodes.push(AssemblyNode {
             instruction: Instruction::Set(condition),
             size,
-            left: rhs.clone(),
+            left: right.clone(),
             right: Expression::None,
         });
-        (size, rhs)
+        (size, right)
     }
 
     fn setup_stack_frame(&mut self) {

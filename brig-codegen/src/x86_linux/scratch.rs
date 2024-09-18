@@ -36,7 +36,7 @@ impl RegisterNode {
 }
 impl From<Var> for RegisterNode {
     fn from(var: Var) -> Self {
-        RegisterNode::new(var.id, var.size)
+        RegisterNode::new(var.id, var.ty.get().size())
     }
 }
 impl From<TempVal> for RegisterNode {
@@ -145,7 +145,7 @@ impl RegisterGraph {
                 if self.nodes.contains_key(&var.clone().into()) {
                     return;
                 }
-                self.stack_offset -= var.size as i64;
+                self.stack_offset -= var.ty.get().size() as i64;
                 self.nodes.insert(
                     var.clone().into(),
                     RegisterNodeData {
@@ -166,7 +166,7 @@ impl RegisterGraph {
                 if self.nodes.contains_key(&var.clone().into()) {
                     return;
                 }
-                self.stack_offset -= var.size as i64;
+                self.stack_offset -= var.ty.get().size() as i64;
                 self.nodes.insert(
                     var.clone().into(),
                     RegisterNodeData {

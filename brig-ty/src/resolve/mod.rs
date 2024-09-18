@@ -1,35 +1,10 @@
-use brig_ast::Program;
+use brig_common::Span;
 use brig_diagnostic::{Error, Result};
+use thin_vec::ThinVec;
 
-use crate::{get_ty, FnTy, Ty, TyKind, UintTy};
+use crate::{FnTy, Ty, TyIdx, TyKind, UintTy};
 
-// TODO: pub fn populate_mod_decls(mod: &Module, path: Path) -> Result<()> {}
-// The above function should populate any module-level declarations into the type map.
-pub fn populate_global_decls(program: &Program) -> Result<()> {
-    for decl in &program.declarations {
-        match &decl.kind {
-            brig_ast::DeclKind::Fn(func) => {
-                let mut args = Vec::with_capacity(func.parameters.len());
-                for param in &func.parameters {
-                    let ty = parse_ast_ty(&param.ty)?;
-                    args.push(ty);
-                }
-
-                let ret = parse_ast_ty(&func.return_ty)?;
-                let kind = TyKind::Function(FnTy {
-                    name: func.name.name,
-                    args,
-                    ret: Box::new(ret),
-                });
-                let ty = Ty { kind };
-                crate::add_ty(func.name.name, ty);
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Parse a [brig_ast::Ty] into a [brig_ty::Ty](crate::Ty).
+/// Parse a [brig_ast::Ty] into a [brig_ty::Ty](crate::Ty) and return a [`brig_ty::TyIdx`].
 ///
 /// As of now, any user-defined types are assumed to be already declared and resolved.
 /// This usually means that user-defined types should only be referenced after they have been
@@ -43,34 +18,36 @@ pub fn populate_global_decls(program: &Program) -> Result<()> {
 /// let x: Bar = 42;
 /// type Bar = u32;
 /// ```
-pub fn parse_ast_ty(ty: &brig_ast::Ty) -> Result<Ty> {
+pub fn parse_ast_ty(ty: &brig_ast::Ty) -> Result<TyIdx> {
     let kind = match &ty.kind {
-        brig_ast::TyKind::Lit(lit) => match lit {
-            brig_ast::LitTy::Uint(uint) => match uint {
-                brig_ast::UintTy::U32 => TyKind::Uint(UintTy::U32),
-                brig_ast::UintTy::Usize => TyKind::Uint(UintTy::Usize),
-            },
-            brig_ast::LitTy::Bool => TyKind::Bool,
-            brig_ast::LitTy::Unit => TyKind::Unit,
-            brig_ast::LitTy::Unresolved => {
-                return Err(Error::other("unresolved literal type", ty.span))
-            }
-        },
-        brig_ast::TyKind::UserDefined(ident) => {
-            let name = &ident.name;
-            match get_ty(*name) {
-                Some(ty) => ty.kind,
-                None => {
-                    return Err(Error::other(
-                        format!("unknown type: {}", *name.as_str()),
-                        ident.span,
-                    ))
-                }
-            }
-        }
-        brig_ast::TyKind::Fn(_) => todo!("Function type"),
-        brig_ast::TyKind::Unspecified => todo!("Unspecified type"),
+        brig_ast::TyKind::Lit(lit) => return parse_lit_ast_ty(lit),
+        brig_ast::TyKind::Adt(_) => todo!("Adt type"),
+        brig_ast::TyKind::Fn(fn_ty) => TyKind::Fn(FnTy {
+            name: fn_ty.name,
+            args: fn_ty
+                .args
+                .iter()
+                .map(|x| parse_ast_ty(&x.ty))
+                .collect::<Result<ThinVec<_>>>()?,
+            ret: parse_ast_ty(&fn_ty.ret)?,
+        }),
+        brig_ast::TyKind::Ident(ident) => return Err(Error::other("unresolved type", ident.span)),
+        brig_ast::TyKind::Unspecified => return Err(Error::other("unspecified type", ty.span)),
     };
+    Ok(crate::add_ty(Ty { kind }))
+}
 
-    Ok(Ty { kind })
+pub fn parse_lit_ast_ty(ty: &brig_ast::LitTy) -> Result<TyIdx> {
+    let kind = match ty {
+        brig_ast::LitTy::Uint(uint) => match uint {
+            brig_ast::UintTy::U32 => TyKind::Uint(UintTy::U32),
+            brig_ast::UintTy::Usize => TyKind::Uint(UintTy::Usize),
+        },
+        brig_ast::LitTy::Bool => TyKind::Bool,
+        brig_ast::LitTy::Unit => TyKind::Unit,
+        brig_ast::LitTy::Unresolved => {
+            return Err(Error::other("unresolved literal type", Span::default()))
+        }
+    };
+    Ok(crate::add_ty(Ty { kind }))
 }

@@ -19,7 +19,14 @@ impl TypeChecker {
         let kind = TyKind::Fn(FnTy {
             name: decl.name.name,
             span: decl.span,
-            args: decl.parameters.iter().map(|p| p.ty.clone()).collect(),
+            args: decl
+                .parameters
+                .iter()
+                .map(|p| brig_ast::Field {
+                    name: p.ident.name,
+                    ty: p.ty.clone(),
+                })
+                .collect(),
             ret: Box::new(decl.return_ty.clone()),
         });
         let ty = Ty {

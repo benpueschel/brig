@@ -25,6 +25,13 @@ use std::{
 pub struct Symbol(SymbolIndex);
 type SymbolIndex = usize;
 
+#[macro_export]
+macro_rules! sym {
+    ($s:expr) => {
+        $crate::sym::Symbol::intern($s)
+    };
+}
+
 impl Debug for Symbol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Symbol")

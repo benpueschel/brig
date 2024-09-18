@@ -40,6 +40,7 @@ use std::ops::{Index, IndexMut};
 
 use brig_ast::{BinOp, Ident};
 use brig_common::{sym::Symbol, Span};
+use brig_ty::TyIdx;
 
 pub mod build;
 pub mod debug;
@@ -165,9 +166,18 @@ pub enum Lvalue {
     Temp(TempVal),
 }
 
+impl Lvalue {
+    pub fn ty(&self) -> brig_ty::TyIdx {
+        match self {
+            Lvalue::Variable(var) => var.ty,
+            Lvalue::Temp(temp) => temp.ty,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Rvalue {
-    IntegerLit(usize, usize),
+    IntegerLit(TyIdx, usize),
     Variable(Var),
     Temp(TempVal),
     BinaryExpr(ExprOperator, Operand, Operand),
@@ -209,22 +219,28 @@ impl From<BinOp> for ExprOperator {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Operand {
     pub kind: OperandKind,
-    pub size: usize,
+    pub ty: brig_ty::TyIdx,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OperandKind {
     Consume(Lvalue),
-    IntegerLit(usize, usize),
+    IntegerLit(TyIdx, usize),
     FunctionCall(FunctionCall),
     Unit,
 }
 
+impl From<Operand> for Rvalue {
+    fn from(op: Operand) -> Rvalue {
+        op.kind.into()
+    }
+}
+
 impl From<OperandKind> for Rvalue {
-    fn from(operand: OperandKind) -> Rvalue {
-        match operand {
+    fn from(kind: OperandKind) -> Rvalue {
+        match kind {
             OperandKind::Consume(lvalue) => lvalue.into(),
-            OperandKind::IntegerLit(size, value) => Rvalue::IntegerLit(size, value),
+            OperandKind::IntegerLit(ty, value) => Rvalue::IntegerLit(ty, value),
             OperandKind::FunctionCall(call) => Rvalue::Call(call),
             OperandKind::Unit => panic!("unit operand is not a valid rvalue"),
         }
@@ -240,17 +256,17 @@ impl From<Lvalue> for Rvalue {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TempVal {
-    index: u64,
-    size: usize,
+    pub index: u64,
+    pub ty: brig_ty::TyIdx,
 }
 impl TempVal {
     pub fn value(&self) -> u64 {
         self.index
     }
     pub fn size(&self) -> usize {
-        self.size
+        self.ty.get().size()
     }
 }
 
@@ -264,7 +280,7 @@ pub struct Var {
     // TODO: hide behind a debug flag - we exclusively use the id from this point on
     pub ident: Ident,
     pub id: u64,
-    pub size: usize,
+    pub ty: brig_ty::TyIdx,
 }
 
 #[derive(Debug, Clone, PartialEq)]

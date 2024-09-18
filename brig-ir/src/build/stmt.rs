@@ -1,10 +1,7 @@
 use brig_ast::{AstNode, Expr, LetDecl, ReturnStmt};
 use brig_diagnostic::{Error, Result};
 
-use crate::{
-    resolve, Lvalue, Operand, Scope, Statement, StatementKind, Terminator, Var,
-    VarDecl,
-};
+use crate::{resolve, Lvalue, Operand, Scope, Statement, StatementKind, Terminator, Var, VarDecl};
 
 type Res = Result<Option<Operand>>;
 impl crate::Ir {
@@ -41,11 +38,12 @@ impl crate::Ir {
     pub fn traverse_var_decl(&mut self, data: LetDecl, scope: Scope) -> Res {
         let decls = &mut self.scope_data_mut(scope).var_decls;
         let id = resolve::make_var_id(scope, decls.len());
+        let ty = brig_ty::resolve::parse_ast_ty(&data.ty)?;
 
         let var = Var {
             ident: data.name,
-            size: data.ty.size(),
             id,
+            ty,
         };
 
         decls.push(VarDecl {
