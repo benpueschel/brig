@@ -36,6 +36,7 @@ mod test {
     use crate::*;
     use brig_ast::*;
     use brig_common::Span;
+    use thin_vec::thin_vec;
 
     #[test]
     fn check_multiple_statement_block_return() {
@@ -50,7 +51,7 @@ mod test {
                 span: Span::with_len(7, 5),
             },
             expr: Some(Expr::Block(Block {
-                stmts: vec![
+                stmts: thin_vec![
                     Stmt::LetDecl(LetDecl {
                         name: Ident {
                             name: Symbol::intern("b"),
@@ -105,7 +106,7 @@ mod test {
                 span: Span::with_len(7, 5),
             },
             expr: Some(Expr::Block(Block {
-                stmts: vec![Stmt::Expr(Expr::Lit(Lit {
+                stmts: thin_vec![Stmt::Expr(Expr::Lit(Lit {
                     value: LitVal::Int(IntLit { value: 42 }),
                     ty: LitTy::Unresolved,
                     span: Span::with_len(17, 2),
@@ -123,7 +124,7 @@ mod test {
     fn test_check_block() {
         // { return 42; } -> the block should return a u32
         let mut block = Block {
-            stmts: vec![Stmt::Return(ReturnStmt {
+            stmts: thin_vec![Stmt::Return(ReturnStmt {
                 expr: Expr::Lit(Lit {
                     value: LitVal::Int(IntLit { value: 42 }),
                     ty: LitTy::Unresolved,
@@ -139,7 +140,7 @@ mod test {
         assert_eq!(
             block,
             Block {
-                stmts: vec![Stmt::Return(ReturnStmt {
+                stmts: thin_vec![Stmt::Return(ReturnStmt {
                     expr: Expr::Lit(Lit {
                         value: LitVal::Int(IntLit { value: 42 }),
                         ty: LitTy::Uint(UintTy::U32),

@@ -5,3 +5,4 @@ edition.workspace = true
 
 [dependencies]
 brig-common = { path = "../brig-common" }
+thin-vec = "0.2.13"

@@ -1,3 +1,5 @@
+use thin_vec::ThinVec;
+
 use crate::*;
 
 impl Parser {
@@ -11,9 +13,9 @@ impl Parser {
         Ok(Decl { kind })
     }
 
-    pub fn parse_declaration_modifiers(&mut self) -> Result<Vec<DeclMod>> {
+    pub fn parse_declaration_modifiers(&mut self) -> Result<ThinVec<DeclMod>> {
         static MODIFIERS: [TokenKind; 1] = [TokenKind::Extern];
-        let mut modifiers = Vec::new();
+        let mut modifiers = ThinVec::new();
 
         while MODIFIERS.contains(&self.peek()?.kind) {
             let Token { kind, span } = self.eat()?;
@@ -26,10 +28,7 @@ impl Parser {
         Ok(modifiers)
     }
 
-    pub fn parse_function_declaration(
-        &mut self,
-        modifiers: Vec<DeclMod>,
-    ) -> Result<FnDecl> {
+    pub fn parse_function_declaration(&mut self, modifiers: ThinVec<DeclMod>) -> Result<FnDecl> {
         // <modifiers> fn [name] ( <params> ): <return_type> { <body> }
         let start = modifiers
             .first()
@@ -85,6 +84,7 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use brig_common::sym::Symbol;
+    use thin_vec::thin_vec;
 
     use crate::*;
 
@@ -107,7 +107,7 @@ mod test {
                         span: Span::new(10, 14),
                     },
                     parameters: Punctuated {
-                        elements: vec![
+                        elements: thin_vec![
                             Param {
                                 ident: Ident {
                                     name: Symbol::intern("a"),
@@ -139,7 +139,7 @@ mod test {
                     },
                     body: None,
                     span: Span::new(0, 38),
-                    modifiers: vec![DeclMod {
+                    modifiers: thin_vec![DeclMod {
                         kind: DeclModKind::Extern,
                         span: Span::new(0, 6),
                     }],
@@ -156,7 +156,7 @@ mod test {
         let lexer = Lexer::new(input.to_string());
         let mut parser = Parser::new(lexer);
         let function = parser
-            .parse_function_declaration(vec![])
+            .parse_function_declaration(thin_vec![])
             .expect("Failed to parse function");
 
         assert_eq!(function.span(), Span::new(0, 33));
@@ -167,9 +167,9 @@ mod test {
                     name: Symbol::intern("test"),
                     span: Span::new(3, 7)
                 },
-                modifiers: vec![],
+                modifiers: thin_vec![],
                 parameters: Punctuated {
-                    elements: vec![],
+                    elements: thin_vec![],
                     span: Span::new(8, 9)
                 },
                 return_ty: Ty {
@@ -177,14 +177,14 @@ mod test {
                     span: Span::new(10, 10)
                 },
                 body: Some(Block {
-                    stmts: vec![Stmt::LetDecl(LetDecl {
+                    stmts: thin_vec![Stmt::LetDecl(LetDecl {
                         name: Ident {
                             name: Symbol::intern("x"),
                             span: Span::new(28, 29)
                         },
                         ty: Ty {
                             kind: TyKind::Unspecified,
-                           span: Span::new(30, 30)
+                            span: Span::new(30, 30)
                         },
                         expr: Some(Expr::Lit(Lit {
                             value: LitVal::Int(IntLit { value: 5 }),

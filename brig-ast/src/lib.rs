@@ -1,6 +1,7 @@
 use std::fmt::{self, Display};
 
 use brig_common::{sym::Symbol, Span};
+use thin_vec::ThinVec;
 
 pub trait AstNode {
     fn span(&self) -> Span;
@@ -10,7 +11,7 @@ pub trait AstNode {
 /// A program is a list of top-level declarations in a file.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Program {
-    pub declarations: Vec<Decl>,
+    pub declarations: ThinVec<Decl>,
     pub span: Span,
 }
 
@@ -53,7 +54,7 @@ pub struct FnDecl {
     /// The name of the function.
     pub name: Ident,
     /// The modifiers of the declaration (e.g. `extern`).
-    pub modifiers: Vec<DeclMod>,
+    pub modifiers: ThinVec<DeclMod>,
     /// The parameters of the function.
     pub parameters: Punctuated<Param>,
     /// The return type of the function.
@@ -69,13 +70,13 @@ pub struct FnDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Punctuated<T> {
     /// The elements of the punctuated list.
-    pub elements: Vec<T>,
+    pub elements: ThinVec<T>,
     /// The span of the punctuated list.
     pub span: Span,
 }
 
 impl<T> Punctuated<T> {
-    pub fn new(elements: Vec<T>, span: Span) -> Self {
+    pub fn new(elements: ThinVec<T>, span: Span) -> Self {
         Self { elements, span }
     }
     pub fn iter(&self) -> impl Iterator<Item = &T> {
@@ -103,7 +104,7 @@ impl<'a, T> IntoIterator for &'a Punctuated<T> {
 
 impl<T> IntoIterator for Punctuated<T> {
     type Item = T;
-    type IntoIter = std::vec::IntoIter<T>;
+    type IntoIter = thin_vec::IntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.elements.into_iter()
@@ -141,7 +142,7 @@ pub enum DeclModKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     /// The statements in the block.
-    pub stmts: Vec<Stmt>,
+    pub stmts: ThinVec<Stmt>,
     /// The span of the block.
     pub span: Span,
 }
@@ -389,7 +390,7 @@ pub enum TyKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FnTy {
     pub name: Symbol,
-    pub args: Vec<Ty>,
+    pub args: ThinVec<Ty>,
     pub ret: Box<Ty>,
     pub span: Span,
 }

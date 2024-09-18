@@ -9,3 +9,4 @@ brig-diagnostic = { path = "../brig-diagnostic" }
 brig-ast = { path = "../brig-ast" }
 brig-lexer = { path = "../brig-lexer" }
 brig-macros = { path = "../brig-macros" }
+thin-vec = "0.2.13"

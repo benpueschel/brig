@@ -222,6 +222,7 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use brig_common::sym::Symbol;
+    use thin_vec::thin_vec;
 
     use crate::*;
 
@@ -246,7 +247,7 @@ mod test {
                     span: Span::new(0, 3),
                 },
                 args: Punctuated {
-                    elements: vec![
+                    elements: thin_vec![
                         Expr::Lit(Lit {
                             value: LitVal::Int(IntLit { value: 1 }),
                             ty: LitTy::Unresolved,
@@ -428,7 +429,7 @@ mod test {
                     span: Span::new(3, 4),
                 })),
                 then_block: Block {
-                    stmts: vec![Stmt::Expr(Expr::Lit(Lit {
+                    stmts: thin_vec![Stmt::Expr(Expr::Lit(Lit {
                         value: LitVal::Int(IntLit { value: 5 }),
                         ty: LitTy::Unresolved,
                         span: Span::new(7, 8),
@@ -436,7 +437,7 @@ mod test {
                     span: Span::new(5, 8),
                 },
                 else_block: Some(Block {
-                    stmts: vec![Stmt::Expr(Expr::Lit(Lit {
+                    stmts: thin_vec![Stmt::Expr(Expr::Lit(Lit {
                         value: LitVal::Int(IntLit { value: 10 }),
                         ty: LitTy::Unresolved,
                         span: Span::new(18, 20),

@@ -6,6 +6,7 @@ use brig_common::Span;
 use brig_diagnostic::{Error, Result};
 use brig_lexer::{Lexer, Token, TokenKind};
 use brig_macros::verify_token;
+use thin_vec::ThinVec;
 
 mod block;
 mod decl;
@@ -86,7 +87,7 @@ impl Parser {
     {
         verify_token!(self.eat()?, TokenKind::ParenOpen);
 
-        let mut elements = Vec::new();
+        let mut elements = ThinVec::new();
         let mut span = self.peek()?.span;
 
         if self.peek()?.kind == TokenKind::ParenClose {

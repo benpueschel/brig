@@ -1,3 +1,5 @@
+use thin_vec::ThinVec;
+
 use crate::*;
 
 impl Parser {
@@ -6,7 +8,7 @@ impl Parser {
         let span = self.peek()?.span;
         verify_token!(self.eat()?, TokenKind::BraceOpen);
 
-        let mut statements = Vec::new();
+        let mut statements = ThinVec::new();
         while self.peek()?.kind != TokenKind::BraceClose {
             statements.push(self.parse_statement()?);
         }
@@ -18,18 +20,22 @@ impl Parser {
             statements.last().map(|s| s.span()).unwrap_or_default(),
         );
 
-        Ok(Block { span, stmts: statements })
+        Ok(Block {
+            span,
+            stmts: statements,
+        })
     }
 }
 
 #[cfg(test)]
 mod test {
     use brig_ast::{
-        AstNode, BinExpr, BinOp, Block, Expr, Ident, IntLit, Lit,
-        LitTy, LitVal, Stmt, Ty, TyKind, UintTy, LetDecl,
+        AstNode, BinExpr, BinOp, Block, Expr, Ident, IntLit, LetDecl, Lit, LitTy, LitVal, Stmt, Ty,
+        TyKind, UintTy,
     };
     use brig_common::{sym::Symbol, Span};
     use brig_lexer::Lexer;
+    use thin_vec::thin_vec;
 
     use crate::Parser;
 
@@ -53,7 +59,7 @@ mod test {
                     span: Span::with_len(6, 5),
                 },
                 expr: Some(Expr::Block(Block {
-                    stmts: vec![Stmt::Expr(Expr::Lit(Lit {
+                    stmts: thin_vec![Stmt::Expr(Expr::Lit(Lit {
                         value: LitVal::Int(IntLit { value: 42 }),
                         ty: LitTy::Unresolved,
                         span: Span::with_len(13, 2),
@@ -77,7 +83,7 @@ mod test {
         assert_eq!(
             block,
             Block {
-                stmts: vec![
+                stmts: thin_vec![
                     Stmt::LetDecl(LetDecl {
                         name: Ident {
                             name: Symbol::intern("x"),
@@ -126,7 +132,7 @@ mod test {
         assert_eq!(
             block,
             Block {
-                stmts: vec![
+                stmts: thin_vec![
                     Stmt::LetDecl(LetDecl {
                         name: Ident {
                             name: Symbol::intern("x"),
