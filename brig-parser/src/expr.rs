@@ -69,7 +69,9 @@ impl Parser {
         self.parse_binary_expression(Parser::parse_add_expression, |this| {
             let x = this.peek()?.kind;
             use TokenKind::*;
-            Ok(matches!(x, Equal | Bang | LeftCaret | RightCaret))
+            // FIXME: This should accept Equal as well, but that somehow breaks assignment
+            // expressions. Need to refactor the parser to handle this better.
+            Ok(matches!(x, Bang | LeftCaret | RightCaret))
         })
     }
     pub fn parse_add_expression(&mut self) -> Result<Expr> {
