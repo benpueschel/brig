@@ -220,6 +220,7 @@ pub enum Expr {
     Call(CallExpr),
     Lit(Lit),
     Bin(BinExpr),
+    AdtInit(AdtInit),
     Assign(Box<Expr>, Box<Expr>),
     Ident(Ident),
     Block(Block),
@@ -231,12 +232,47 @@ impl AstNode for Expr {
         match self {
             Expr::Lit(l) => l.span,
             Expr::Bin(b) => b.span,
+            Expr::AdtInit(a) => a.span(),
             Expr::Assign(lhs, rhs) => Span::compose(lhs.span(), rhs.span()),
             Expr::Ident(v) => v.span,
             Expr::Call(c) => c.span,
             Expr::Block(b) => b.span,
             Expr::If(i) => i.span,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AdtInit {
+    Struct(StructInit),
+}
+
+impl AstNode for AdtInit {
+    fn span(&self) -> Span {
+        match self {
+            AdtInit::Struct(s) => s.span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructInit {
+    pub name: Ident,
+    pub fields: ThinVec<FieldInit>,
+    pub span: Span,
+    pub def: Option<Struct>,
+    pub ty: Option<Ty>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldInit {
+    pub name: Ident,
+    pub expr: Expr,
+}
+
+impl AstNode for FieldInit {
+    fn span(&self) -> Span {
+        Span::compose(self.name.span, self.expr.span())
     }
 }
 
@@ -342,13 +378,21 @@ impl AstNode for Param {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 pub struct Ident {
     /// The name of the identifier.
     pub name: Symbol,
     /// The span of the identifier.
     pub span: Span,
 }
+
+impl PartialEq for Ident {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for Ident {}
 
 impl Display for Ident {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -362,10 +406,16 @@ impl AstNode for Ident {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Ty {
     pub kind: TyKind,
     pub span: Span,
+}
+
+impl PartialEq for Ty {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
+    }
 }
 
 impl Ty {
@@ -444,6 +494,12 @@ pub struct FnTy {
 pub struct Field {
     pub name: Ident,
     pub ty: Ty,
+}
+
+impl AstNode for Field {
+    fn span(&self) -> Span {
+        Span::compose(self.name.span, self.ty.span)
+    }
 }
 
 impl Display for Field {

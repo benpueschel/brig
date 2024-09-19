@@ -127,6 +127,7 @@ impl Display for Rvalue {
             Rvalue::Temp(temp) => write!(f, "t{}", temp.index),
             Rvalue::BinaryExpr(op, lhs, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
             Rvalue::Call(call) => write!(f, "{}", call),
+            Rvalue::FieldAccess(operand, field) => write!(f, "{}.{}", operand, field),
         }
     }
 }
@@ -134,6 +135,7 @@ impl Display for Rvalue {
 impl Display for Lvalue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Lvalue::FieldAccess(var, field) => write!(f, "{}.{}", var.ident, field),
             Lvalue::Variable(var) => write!(f, "{}", var.ident),
             Lvalue::Temp(temp) => write!(f, "t{}", temp.index),
         }
@@ -184,6 +186,7 @@ impl Display for OperandKind {
             OperandKind::Consume(lvalue) => write!(f, "{}", lvalue),
             OperandKind::IntegerLit(_, int) => write!(f, "{}", int),
             OperandKind::FunctionCall(call) => write!(f, "{}", call),
+            OperandKind::FieldAccess(operand, field) => write!(f, "{}.{}", operand, field),
             OperandKind::Unit => write!(f, "()"),
         }
     }

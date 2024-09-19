@@ -59,7 +59,7 @@ impl crate::Ir {
     pub fn traverse_lvalue(&mut self, expr: Expr, scope: Scope) -> Result<Lvalue> {
         match expr {
             brig_ast::Expr::Ident(ident) => {
-                let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
+                let var = resolve::resolve_var(self, ident, scope).ok_or_else(|| {
                     Error::other(
                         format!("variable '{}' not found", *ident.name.as_str()),
                         ident.span,
@@ -77,10 +77,11 @@ impl crate::Ir {
     pub fn traverse_rvalue(&mut self, expr: Expr, scope: Scope) -> Result<Rvalue> {
         let span = expr.span();
         match expr {
-            Expr::Call(call) => {
-                let call = self.traverse_call_expression(call, scope)?;
-                Ok(Rvalue::Call(call))
-            }
+            Expr::Call(call) => Ok(Rvalue::Call(self.traverse_call_expression(call, scope)?)),
+            Expr::AdtInit(adt) => Ok(self
+                .traverse_adt_init(adt, scope)?
+                .ok_or_else(|| Error::other("adt init expression did not return an operand", span))?
+                .into()),
             Expr::Lit(lit) => match lit.value {
                 brig_ast::LitVal::Int(val) => Ok(Rvalue::IntegerLit(
                     brig_ty::resolve::parse_lit_ast_ty(&lit.ty)?,
@@ -105,7 +106,7 @@ impl crate::Ir {
                 Ok(Rvalue::Unit)
             }
             Expr::Ident(ident) => {
-                let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
+                let var = resolve::resolve_var(self, ident, scope).ok_or_else(|| {
                     Error::other(
                         format!("variable '{}' not found", *ident.name.as_str()),
                         ident.span,
@@ -137,8 +138,13 @@ impl crate::Ir {
                 Ok(None)
             }
             Expr::Call(call) => {
+                let ty = call
+                    .fn_ty
+                    .as_ref()
+                    .ok_or_else(|| Error::other("function type not resolved", call.span))?;
+
+                let ty = brig_ty::resolve::parse_ast_ty(&ty.ret)?;
                 let call = self.traverse_call_expression(call, scope)?;
-                let ty = brig_ty::resolve::parse_ast_ty(&call.ty.ret)?;
                 let temp = Lvalue::Temp(self.alloc_temp(ty, scope));
 
                 self.current_block_mut().statements.push(Statement {
@@ -161,6 +167,7 @@ impl crate::Ir {
             Expr::If(if_expr) => self.traverse_if_expression(if_expr, scope),
             Expr::Lit(lit) => self.traverse_literal(lit),
             Expr::Ident(ident) => self.traverse_identifier(ident, scope),
+            Expr::AdtInit(adt) => self.traverse_adt_init(adt, scope),
         }
     }
 
@@ -183,7 +190,7 @@ impl crate::Ir {
     }
 
     pub fn traverse_identifier(&mut self, ident: brig_ast::Ident, scope: Scope) -> Res {
-        let var = resolve::resolve_var(self, ident.clone(), scope).ok_or_else(|| {
+        let var = resolve::resolve_var(self, ident, scope).ok_or_else(|| {
             Error::other(
                 format!("variable '{}' not found", *ident.name.as_str()),
                 ident.span,
@@ -286,11 +293,13 @@ impl crate::Ir {
             );
         }
 
+        let ty = brig_ty::resolve::parse_fn_ast_ty(&fn_ty)?;
+
         Ok(FunctionCall {
             name: call.callee.name,
-            ty: fn_ty,
             span: call.span,
             args,
+            ty,
         })
     }
 

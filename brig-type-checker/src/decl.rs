@@ -1,5 +1,6 @@
-use brig_ast::{Decl, DeclKind, FnDecl, FnTy, StructDecl, Ty, TyKind};
+use brig_ast::{Adt, Decl, DeclKind, Field, FnDecl, FnTy, Struct, StructDecl, Ty, TyKind};
 use brig_diagnostic::Result;
+use thin_vec::thin_vec;
 
 use crate::TypeChecker;
 
@@ -14,10 +15,24 @@ impl TypeChecker {
 
     /// TODO: check for cyclic dependencies
     pub fn check_struct_declaration(&mut self, decl: &mut StructDecl) -> Result<()> {
+        let mut fields = thin_vec![];
         for field in &decl.fields {
             self.add_symbol(field.name.name, field.ty.clone());
+            fields.push(Field {
+                name: field.name,
+                ty: field.ty.clone(),
+            });
         }
-
+        self.add_symbol(
+            decl.name.name,
+            Ty {
+                kind: TyKind::Adt(Adt::Struct(Struct {
+                    name: decl.name.name,
+                    fields,
+                })),
+                span: decl.span,
+            },
+        );
         Ok(())
     }
 
@@ -26,14 +41,16 @@ impl TypeChecker {
             decl.return_ty.kind = TyKind::Lit(brig_ast::LitTy::Unit);
         }
 
+        self.check_ty(&mut decl.return_ty)?;
+
         let kind = TyKind::Fn(FnTy {
             name: decl.name.name,
             span: decl.span,
             args: decl
                 .parameters
                 .iter()
-                .map(|p| brig_ast::Field {
-                    name: p.ident.clone(),
+                .map(|p| Field {
+                    name: p.ident,
                     ty: p.ty.clone(),
                 })
                 .collect(),

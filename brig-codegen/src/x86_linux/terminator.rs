@@ -63,6 +63,27 @@ impl X86Linux {
         });
     }
 
+    fn process_operand_if(
+        &mut self,
+        graph: &mut Ir,
+        expr: Expression,
+        size: usize,
+        then_label: Expression,
+    ) {
+        self.nodes.push(AssemblyNode {
+            instruction: Instruction::Cmp,
+            left: Expression::IntegerLiteral(0),
+            right: expr,
+            size,
+        });
+        self.nodes.push(AssemblyNode {
+            instruction: Instruction::Jmp(JumpCondition::NotEqual),
+            size: 0,
+            left: then_label,
+            right: Expression::None,
+        });
+    }
+
     fn process_if(
         &mut self,
         graph: &mut Ir,
@@ -78,54 +99,27 @@ impl X86Linux {
                     kind: OperandKind::Consume(Lvalue::Temp(*temp)),
                     ty: temp.ty,
                 });
-                self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Cmp,
-                    size: temp.ty.get().size(),
-                    left: Expression::IntegerLiteral(0),
-                    right: operand,
-                });
-                self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Jmp(JumpCondition::NotEqual),
-                    size: 0,
-                    left: then_label.clone(),
-                    right: Expression::None,
-                });
+                self.process_operand_if(graph, operand, temp.ty.get().size(), then_label.clone());
             }
             Rvalue::Variable(var) => {
                 let operand = self.process_operand(&Operand {
                     kind: OperandKind::Consume(Lvalue::Variable(var.clone())),
                     ty: var.ty,
                 });
-                self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Cmp,
-                    size: var.ty.get().size(),
-                    left: Expression::IntegerLiteral(0),
-                    right: operand,
-                });
-                self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Jmp(JumpCondition::NotEqual),
-                    size: 0,
-                    left: then_label.clone(),
-                    right: Expression::None,
-                });
+                self.process_operand_if(graph, operand, var.ty.get().size(), then_label.clone());
+            }
+            Rvalue::FieldAccess(var, field) => {
+                let field = *field;
+                let operand = self.process_field_access(var, field);
+                let field_ty = var.get_field_ty(field);
+                self.process_operand_if(graph, operand, field_ty.get().size(), then_label.clone());
             }
             Rvalue::IntegerLit(ty, lit) => {
                 let operand = self.process_operand(&Operand {
                     kind: OperandKind::IntegerLit(*ty, *lit),
                     ty: *ty,
                 });
-                self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Cmp,
-                    size: ty.get().size(),
-                    left: Expression::IntegerLiteral(0),
-                    right: operand,
-                });
-                self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Jmp(JumpCondition::NotEqual),
-                    size: 0,
-                    left: then_label.clone(),
-                    right: Expression::None,
-                });
+                self.process_operand_if(graph, operand, ty.get().size(), then_label.clone());
             }
             Rvalue::Unit => panic!("unit rvalue in if condition"),
             Rvalue::BinaryExpr(op, lhs, rhs) => {
@@ -162,18 +156,7 @@ impl X86Linux {
                 } else {
                     let (size, expr) =
                         self.process_binary_expr(op.clone(), rhs.clone(), lhs.clone());
-                    self.nodes.push(AssemblyNode {
-                        instruction: Instruction::Cmp,
-                        size,
-                        left: Expression::IntegerLiteral(0),
-                        right: expr,
-                    });
-                    self.nodes.push(AssemblyNode {
-                        instruction: Instruction::Jmp(JumpCondition::Equal),
-                        size: 0,
-                        left: then_label.clone(),
-                        right: Expression::None,
-                    });
+                    self.process_operand_if(graph, expr, size, then_label.clone());
                 }
             }
         }

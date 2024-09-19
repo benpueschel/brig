@@ -6,6 +6,7 @@ use crate::{
     IR_END_BLOCK, IR_GLOBAL_SCOPE, IR_START_BLOCK,
 };
 
+mod adt;
 mod block;
 mod expr;
 mod stmt;
@@ -65,7 +66,7 @@ impl IrBuilder {
             ir.scope_data_mut(fn_scope).var_decls.push(VarDecl {
                 scope: fn_scope,
                 var: Var {
-                    ident: param.ident.clone(),
+                    ident: param.ident,
                     id,
                     ty,
                 },
