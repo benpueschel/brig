@@ -1,4 +1,4 @@
-use thin_vec::ThinVec;
+use thin_vec::{thin_vec, ThinVec};
 
 use crate::*;
 
@@ -8,6 +8,7 @@ impl Parser {
         let token = self.peek()?;
         let kind = match token.kind {
             TokenKind::Fn => DeclKind::Fn(self.parse_function_declaration(modifiers)?),
+            TokenKind::Struct => DeclKind::Struct(self.parse_struct_declaration(modifiers)?),
             x => return Err(Error::expected_token(x, vec!["fn".to_string()], token.span)),
         };
         Ok(Decl { kind })
@@ -26,6 +27,49 @@ impl Parser {
             modifiers.push(DeclMod { kind, span });
         }
         Ok(modifiers)
+    }
+
+    /// TODO: modifiers
+    pub fn parse_struct_declaration(&mut self, _modifiers: ThinVec<DeclMod>) -> Result<StructDecl> {
+        // <modifiers> struct [name] { <fields> }
+
+        let mut span = self.peek()?.span;
+        verify_token!(self.eat()?, TokenKind::Struct);
+
+        // Parse struct name
+        let name = ident_from_token(self.eat()?)?;
+
+        verify_token!(self.eat()?, TokenKind::BraceOpen);
+
+        // Parse struct fields
+        let mut fields = thin_vec![];
+        while self.peek()?.kind != TokenKind::BraceClose {
+            let ident = ident_from_token(self.eat()?)?;
+
+            let ty = self.parse_type()?;
+            span = Span::compose(span, ty.span);
+
+            if ty.kind == TyKind::Unspecified {
+                return Err(Error::expected_type(ident.span));
+            }
+            fields.push(Field { name: ident, ty });
+
+            match self.peek()?.kind {
+                TokenKind::Comma => span = Span::compose(span, self.eat()?.span),
+                TokenKind::BraceClose => break,
+                x => {
+                    return Err(Error::expected_token(
+                        x,
+                        vec![",".to_string()],
+                        self.peek()?.span,
+                    ))
+                }
+            }
+        }
+
+        verify_token!(self.eat()?, TokenKind::BraceClose);
+
+        Ok(StructDecl { name, span, fields })
     }
 
     pub fn parse_function_declaration(&mut self, modifiers: ThinVec<DeclMod>) -> Result<FnDecl> {
@@ -83,10 +127,59 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
-    use brig_common::sym::Symbol;
+    use brig_common::{sym, sym::Symbol};
     use thin_vec::thin_vec;
 
     use crate::*;
+
+    #[test]
+    pub fn parse_struct() {
+        let input = "struct Test {
+            a: usize,
+            b: u32,
+        }";
+
+        let lexer = Lexer::new(input.to_string());
+        let mut parser = Parser::new(lexer);
+        let declaration = parser
+            .parse_declaration()
+            .expect("Failed to parse declaration");
+        assert_eq!(declaration.span(), Span::new(0, 55));
+        assert_eq!(
+            declaration,
+            Decl {
+                kind: DeclKind::Struct(StructDecl {
+                    name: Ident {
+                        name: sym!("Test"),
+                        span: Span::new(7, 11),
+                    },
+                    fields: thin_vec![
+                        Field {
+                            name: Ident {
+                                name: sym!("a"),
+                                span: Span::new(26, 27),
+                            },
+                            ty: Ty {
+                                kind: TyKind::Lit(LitTy::Uint(UintTy::Usize)),
+                                span: Span::new(29, 34),
+                            },
+                        },
+                        Field {
+                            name: Ident {
+                                name: sym!("b"),
+                                span: Span::new(48, 49),
+                            },
+                            ty: Ty {
+                                kind: TyKind::Lit(LitTy::Uint(UintTy::U32)),
+                                span: Span::new(51, 54),
+                            },
+                        },
+                    ],
+                    span: Span::new(0, 55),
+                },),
+            }
+        );
+    }
 
     #[test]
     pub fn parse_extern_function() {

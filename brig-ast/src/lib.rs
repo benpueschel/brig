@@ -38,12 +38,14 @@ impl AstNode for Decl {
 #[derive(Debug, Clone, PartialEq)]
 pub enum DeclKind {
     Fn(FnDecl),
+    Struct(StructDecl),
 }
 
 impl AstNode for DeclKind {
     fn span(&self) -> Span {
         match self {
             DeclKind::Fn(f) => f.span,
+            DeclKind::Struct(s) => s.span,
         }
     }
 }
@@ -63,6 +65,13 @@ pub struct FnDecl {
     /// If this is `None`, the function is extern.
     pub body: Option<Block>,
     /// The span of the function declaration.
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StructDecl {
+    pub name: Ident,
+    pub fields: ThinVec<Field>,
     pub span: Span,
 }
 
@@ -433,13 +442,13 @@ pub struct FnTy {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    pub name: Symbol,
+    pub name: Ident,
     pub ty: Ty,
 }
 
 impl Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", *self.name.as_str(), self.ty.kind)
+        write!(f, "{}: {}", self.name, self.ty.kind)
     }
 }
 

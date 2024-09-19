@@ -1,4 +1,4 @@
-use brig_ast::{Decl, DeclKind, FnDecl, FnTy, Ty, TyKind};
+use brig_ast::{Decl, DeclKind, FnDecl, FnTy, StructDecl, Ty, TyKind};
 use brig_diagnostic::Result;
 
 use crate::TypeChecker;
@@ -8,7 +8,17 @@ impl TypeChecker {
         // TODO: resolve global declarations
         match decl.kind {
             DeclKind::Fn(ref mut f) => self.check_function_declaration(f),
+            DeclKind::Struct(ref mut s) => self.check_struct_declaration(s),
         }
+    }
+
+    /// TODO: check for cyclic dependencies
+    pub fn check_struct_declaration(&mut self, decl: &mut StructDecl) -> Result<()> {
+        for field in &decl.fields {
+            self.add_symbol(field.name.name, field.ty.clone());
+        }
+
+        Ok(())
     }
 
     pub fn check_function_declaration(&mut self, decl: &mut FnDecl) -> Result<()> {
@@ -23,7 +33,7 @@ impl TypeChecker {
                 .parameters
                 .iter()
                 .map(|p| brig_ast::Field {
-                    name: p.ident.name,
+                    name: p.ident.clone(),
                     ty: p.ty.clone(),
                 })
                 .collect(),

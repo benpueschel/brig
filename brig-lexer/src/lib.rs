@@ -31,6 +31,7 @@ impl Token {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
+    Struct,
     Return,
     Extern,
     Fn,
@@ -76,6 +77,7 @@ impl Display for TokenKind {
 impl TokenKind {
     pub const fn to_str(&self) -> &str {
         match self {
+            TokenKind::Struct => "struct",
             TokenKind::Extern => "extern",
             TokenKind::Return => "return",
             TokenKind::Fn => "fn",
@@ -222,6 +224,7 @@ impl Lexer {
 
         Ok(Token {
             kind: match identifier {
+                "struct" => TokenKind::Struct,
                 "return" => TokenKind::Return,
                 "let" => TokenKind::Let,
                 "extern" => TokenKind::Extern,
