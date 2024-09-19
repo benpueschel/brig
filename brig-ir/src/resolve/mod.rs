@@ -69,11 +69,19 @@ fn resolve_symbols_in_rvalue(ir: &mut Ir, rvalue: &mut Rvalue, scope: Scope) {
                 resolve_symbols_in_operand(ir, arg, scope);
             }
         }
+        Rvalue::FieldAccess(var, _symbol) => {
+            resolve_symbol(ir, var, scope);
+            todo!("ir resolve field access");
+        }
         Rvalue::Unit => {}
     }
 }
 fn resolve_symbols_in_lvalue(ir: &mut Ir, lvalue: &mut Lvalue, scope: Scope) {
     match lvalue {
+        Lvalue::FieldAccess(var, field) => {
+            resolve_symbol(ir, var, scope);
+            var.get_field_ty(*field);
+        }
         Lvalue::Variable(var) => {
             resolve_symbol(ir, var, scope);
         }
@@ -87,6 +95,9 @@ fn resolve_symbols_in_operand(ir: &mut Ir, operand: &mut Operand, scope: Scope) 
         }
         OperandKind::Unit => {}
         OperandKind::IntegerLit(_, _) => {}
+        OperandKind::FieldAccess(var, _) => {
+            resolve_symbol(ir, var, scope);
+        }
         OperandKind::FunctionCall(call) => {
             for arg in &mut call.args {
                 resolve_symbols_in_operand(ir, arg, scope);
@@ -105,7 +116,7 @@ pub(crate) fn resolve_var(ir: &mut Ir, ident: Ident, scope_index: Scope) -> Opti
         let var_decl = &mut scope.var_decls[i].var;
         if var_decl.ident.name == ident.name {
             return Some(Var {
-                ident: var_decl.ident.clone(),
+                ident: var_decl.ident,
                 id: var_decl.id,
                 ty: var_decl.ty,
             });
@@ -119,7 +130,7 @@ pub(crate) fn resolve_var(ir: &mut Ir, ident: Ident, scope_index: Scope) -> Opti
 }
 
 pub(crate) fn resolve_symbol(ir: &mut Ir, var: &mut Var, scope_index: Scope) {
-    if let Some(v) = resolve_var(ir, var.ident.clone(), scope_index) {
+    if let Some(v) = resolve_var(ir, var.ident, scope_index) {
         *var = v;
         return;
     }

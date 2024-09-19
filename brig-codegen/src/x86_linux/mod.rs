@@ -230,6 +230,7 @@ impl X86Linux {
 
     fn process_lvalue(&mut self, lvalue: &Lvalue) -> Expression {
         match lvalue {
+            Lvalue::FieldAccess(var, field) => self.process_field_access(var, *field),
             Lvalue::Variable(var) => self.process_variable(var.clone()),
             Lvalue::Temp(temp) => self.process_temp(*temp),
         }
@@ -309,8 +310,14 @@ impl X86Linux {
             OperandKind::Consume(lvalue) => self.process_lvalue(lvalue),
             OperandKind::FunctionCall(call) => self.process_function_call(call),
             OperandKind::IntegerLit(_ty, x) => Expression::IntegerLiteral(*x),
+            OperandKind::FieldAccess(lvalue, symbol) => self.process_field_access(lvalue, *symbol),
             OperandKind::Unit => Expression::None,
         }
+    }
+
+    fn process_field_access(&mut self, var: &Var, field: Symbol) -> Expression {
+        let field_ty = var.get_field_ty(field);
+        todo!("process field access")
     }
 
     fn process_binary_expr(

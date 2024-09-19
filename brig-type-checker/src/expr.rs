@@ -10,6 +10,7 @@ impl TypeChecker {
     pub fn check_expression(&mut self, expr: &mut Expr, ty: Option<&Ty>) -> Result<Ty> {
         match expr {
             Expr::Bin(ref mut e) => self.check_binary_expression(e, ty),
+            Expr::AdtInit(ref mut e) => self.check_adt_init(e, ty),
             Expr::Assign(ref mut lhs, ref mut rhs) => {
                 let lhs_ty = self.check_expression(lhs, None)?;
                 let rhs_ty = self.check_expression(rhs, Some(&lhs_ty))?;
@@ -121,11 +122,11 @@ impl TypeChecker {
                     (ty.kind.to_string(), ty.span),
                     (path.to_string(), lit.span),
                 )),
-                TyKind::Adt(u_ty) => {
+                TyKind::Adt(adt) => {
                     // TODO: check some stuff about u_ty
                     Err(Error::type_mismatch(
                         (ty.kind.to_string(), ty.span),
-                        (u_ty.to_string(), u_ty.span()),
+                        (adt.to_string(), adt.span()),
                     ))
                 }
                 TyKind::Fn(fn_ty) => Err(Error::type_mismatch(

@@ -8,6 +8,7 @@ use brig_lexer::{Lexer, Token, TokenKind};
 use brig_macros::verify_token;
 use thin_vec::ThinVec;
 
+mod adt;
 mod block;
 mod decl;
 mod expr;

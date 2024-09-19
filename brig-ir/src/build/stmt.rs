@@ -32,6 +32,7 @@ impl crate::Ir {
             }
             Expr::Lit(lit) => self.traverse_literal(lit),
             Expr::Ident(ident) => self.traverse_identifier(ident, scope),
+            Expr::AdtInit(adt) => self.traverse_adt_init(adt, scope),
         }
     }
 

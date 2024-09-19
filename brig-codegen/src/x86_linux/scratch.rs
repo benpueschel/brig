@@ -141,6 +141,9 @@ impl RegisterGraph {
 
     fn process_lvalue(&mut self, lvalue: &Lvalue) {
         match lvalue {
+            Lvalue::FieldAccess(var, field) => {
+                // TODO: figure out if we need to do anything here
+            }
             Lvalue::Variable(var) => {
                 if self.nodes.contains_key(&var.clone().into()) {
                     return;
@@ -189,6 +192,9 @@ impl RegisterGraph {
             Rvalue::Temp(temp) => {
                 let _node = self.get_node_or_insert((*temp).into());
             }
+            Rvalue::FieldAccess(op, sym) => {
+                todo!();
+            }
         };
     }
 
@@ -198,6 +204,7 @@ impl RegisterGraph {
             OperandKind::Unit => {}
             OperandKind::IntegerLit(_, _) => {}
             OperandKind::FunctionCall(_) => {}
+            OperandKind::FieldAccess(op, sym) => todo!(),
         }
     }
 

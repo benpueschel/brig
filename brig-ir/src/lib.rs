@@ -40,7 +40,7 @@ use std::ops::{Index, IndexMut};
 
 use brig_ast::{BinOp, Ident};
 use brig_common::{sym::Symbol, Span};
-use brig_ty::TyIdx;
+use brig_ty::{Adt, TyIdx, TyKind};
 
 pub mod build;
 pub mod debug;
@@ -155,7 +155,7 @@ pub enum StatementKind {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionCall {
     pub name: Symbol,
-    pub ty: brig_ast::FnTy,
+    pub ty: brig_ty::FnTy,
     pub args: Vec<Operand>,
     pub span: Span,
 }
@@ -163,12 +163,14 @@ pub struct FunctionCall {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Lvalue {
     Variable(Var),
+    FieldAccess(Var, Symbol),
     Temp(TempVal),
 }
 
 impl Lvalue {
     pub fn ty(&self) -> brig_ty::TyIdx {
         match self {
+            Lvalue::FieldAccess(var, symbol) => var.get_field_ty(*symbol),
             Lvalue::Variable(var) => var.ty,
             Lvalue::Temp(temp) => temp.ty,
         }
@@ -179,10 +181,25 @@ impl Lvalue {
 pub enum Rvalue {
     IntegerLit(TyIdx, usize),
     Variable(Var),
+    FieldAccess(Var, Symbol),
     Temp(TempVal),
     BinaryExpr(ExprOperator, Operand, Operand),
     Call(FunctionCall),
     Unit,
+}
+
+impl Rvalue {
+    pub fn ty(&self) -> brig_ty::TyIdx {
+        match self {
+            Rvalue::IntegerLit(ty, _) => *ty,
+            Rvalue::Variable(var) => var.ty,
+            Rvalue::FieldAccess(var, field) => var.get_field_ty(*field),
+            Rvalue::Temp(temp) => temp.ty,
+            Rvalue::BinaryExpr(_, lhs, _) => lhs.ty,
+            Rvalue::Call(call) => call.ty.ret,
+            Rvalue::Unit => todo!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -227,6 +244,7 @@ pub enum OperandKind {
     Consume(Lvalue),
     IntegerLit(TyIdx, usize),
     FunctionCall(FunctionCall),
+    FieldAccess(Var, Symbol),
     Unit,
 }
 
@@ -242,6 +260,7 @@ impl From<OperandKind> for Rvalue {
             OperandKind::Consume(lvalue) => lvalue.into(),
             OperandKind::IntegerLit(ty, value) => Rvalue::IntegerLit(ty, value),
             OperandKind::FunctionCall(call) => Rvalue::Call(call),
+            OperandKind::FieldAccess(var, field) => Rvalue::FieldAccess(var, field),
             OperandKind::Unit => panic!("unit operand is not a valid rvalue"),
         }
     }
@@ -250,6 +269,7 @@ impl From<OperandKind> for Rvalue {
 impl From<Lvalue> for Rvalue {
     fn from(lvalue: Lvalue) -> Rvalue {
         match lvalue {
+            Lvalue::FieldAccess(var, field) => Rvalue::FieldAccess(var, field),
             Lvalue::Variable(var) => Rvalue::Variable(var),
             Lvalue::Temp(temp) => Rvalue::Temp(temp),
         }
@@ -281,6 +301,32 @@ pub struct Var {
     pub ident: Ident,
     pub id: u64,
     pub ty: brig_ty::TyIdx,
+}
+
+impl Var {
+    pub fn get_field_ty(&self, field: Symbol) -> TyIdx {
+        let get = self.ty.get();
+        match &get.kind {
+            TyKind::Int(_) => panic!("Field access on int"),
+            TyKind::Uint(_) => panic!("Field access on uint"),
+            TyKind::Bool => panic!("Field access on bool"),
+            TyKind::Unit => panic!("Field access on unit (wtf)"),
+            TyKind::Adt(adt) => match adt {
+                Adt::Struct(s) => {
+                    let field = s
+                        .fields
+                        .iter()
+                        .find(|f| f.name == field)
+                        .unwrap_or_else(|| {
+                            panic!("Field {} not found in struct {}", field, s.name)
+                        });
+                    field.ty
+                }
+            },
+            TyKind::Fn(_) => panic!("Field access on fn"),
+            TyKind::Unresolved => panic!("Field access on unresolved"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

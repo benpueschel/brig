@@ -82,33 +82,18 @@ impl Parser {
     }
 
     pub fn parse_mult_expression(&mut self) -> Result<Expr> {
-        self.parse_binary_expression(Parser::parse_call_expression, |this| {
+        self.parse_binary_expression(Parser::parse_primary_expression, |this| {
             let x = this.peek()?.kind;
             Ok(x == TokenKind::Star || x == TokenKind::Slash)
         })
     }
 
-    pub fn parse_call_expression(&mut self) -> Result<Expr> {
-        // TODO: for now, we don't support namespacing or structs with methods or fancy stuff
-        // like that. We'd need to parse all that into a PathExpression, then parse the call
-        // on that path.
-        // For now, we'll just parse a single identifier as the callee.
-
-        let token = self.peek()?;
-        let span = token.span;
-
-        let callee = ident_from_token(token);
-        if callee.is_err() {
-            // This doesn't look like a call expression, so just parse the primary expression
-            // and return it.
-            return self.parse_primary_expression();
-        }
-        let callee = callee.unwrap();
-        let _ = self.eat()?; // eat the identifier
+    pub fn parse_call_expression(&mut self, callee: Ident) -> Result<Expr> {
+        let span = callee.span;
 
         if self.peek()?.kind != TokenKind::ParenOpen {
             // This isn't a call expression, so just return the callee as an identifier.
-            return Ok(Expr::Ident(callee));
+            return self.parse_primary_expression();
         }
         let args = self.parse_punctuated_list(TokenKind::Comma, Parser::parse_expression)?;
         let span = Span::compose(span, args.span);
@@ -129,13 +114,23 @@ impl Parser {
                 let block = self.parse_block()?;
                 return Ok(Expr::Block(block));
             }
+            TokenKind::Struct => return self.parse_struct_init_expression(),
             TokenKind::ParenOpen => return self.parse_paren_expression(),
             _ => {}
         }
 
         let token = self.eat()?;
         match token.kind {
-            TokenKind::Identifier(_) => Ok(Expr::Ident(ident_from_token(token)?)),
+            TokenKind::Identifier(sym) => {
+                let ident = Ident {
+                    name: sym,
+                    span: token.span,
+                };
+                match self.peek()?.kind {
+                    TokenKind::ParenOpen => self.parse_call_expression(ident),
+                    _ => Ok(Expr::Ident(ident)),
+                }
+            }
             TokenKind::Integer(value) => Ok(Expr::Lit(Lit {
                 value: LitVal::Int(IntLit { value }),
                 ty: LitTy::Unresolved,

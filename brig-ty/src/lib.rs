@@ -211,6 +211,18 @@ impl Struct {
     pub fn size(&self) -> usize {
         self.fields.iter().map(|field| field.size()).sum()
     }
+
+    #[inline]
+    pub fn field_offset(&self, field: &Field) -> usize {
+        let mut offset = 0;
+        for f in &self.fields {
+            if f == field {
+                return offset;
+            }
+            offset += f.size();
+        }
+        panic!("field not found in struct");
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

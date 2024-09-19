@@ -4,10 +4,11 @@
 
 use std::collections::HashMap;
 
-use brig_ast::{Program, Ty};
+use brig_ast::{Adt, Program, Ty, TyKind};
 use brig_common::sym::Symbol;
-use brig_diagnostic::Result;
+use brig_diagnostic::{Error, Result};
 
+mod adt;
 mod block;
 mod decl;
 mod expr;
@@ -54,6 +55,41 @@ impl TypeChecker {
             }
         }
         None
+    }
+
+    fn check_ty(&self, ty: &mut Ty) -> Result<()> {
+        match &mut ty.kind {
+            TyKind::Lit(_) => Ok(()),
+            TyKind::Adt(adt) => match adt {
+                Adt::Struct(s) => {
+                    for field in &mut s.fields {
+                        self.check_ty(&mut field.ty)?;
+                    }
+                    Ok(())
+                }
+            },
+            TyKind::Fn(fn_ty) => {
+                for arg in &mut fn_ty.args {
+                    self.check_ty(&mut arg.ty)?;
+                }
+                self.check_ty(&mut fn_ty.ret)?;
+                Ok(())
+            }
+            TyKind::Ident(path) => {
+                // TODO: make get_symbol take in a path instead of an interned string
+                if let Some(resolved_ty) = self.get_symbol(*path.segments.last().unwrap()) {
+                    // don't overwrite the span, we need that for diagnostics
+                    ty.kind = resolved_ty.kind;
+                    Ok(())
+                } else {
+                    Err(Error::other(
+                        format!("Could not resolve type '{}'", path),
+                        ty.span,
+                    ))
+                }
+            }
+            TyKind::Unspecified => todo!(),
+        }
     }
 }
 
