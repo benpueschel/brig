@@ -1,3 +1,4 @@
+use std::backtrace::{Backtrace, BacktraceStatus};
 use std::error::Error as StdError;
 use std::fmt::{self, Display, Formatter};
 use std::fs;
@@ -35,15 +36,26 @@ pub enum ErrorKind {
     Other(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub struct Error {
     pub kind: ErrorKind,
     pub span: Span,
+    pub backtrace: Box<Backtrace>,
+}
+
+impl PartialEq for Error {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind && self.span == other.span
+    }
 }
 
 impl Error {
     pub fn new(kind: ErrorKind, span: Span) -> Self {
-        Self { kind, span }
+        Self {
+            kind,
+            span,
+            backtrace: Box::new(Backtrace::capture()),
+        }
     }
     pub fn unexpected_eof(pos: usize) -> Self {
         Self::new(ErrorKind::UnexpectedEof, Span::new(pos, pos))
@@ -112,7 +124,11 @@ impl Error {
 
     pub fn report(&self) -> ariadne::Report {
         let mut colors = ColorGenerator::new();
-        let builder = ariadne::Report::build(ReportKind::Error, (), self.span.start);
+        let mut builder = ariadne::Report::build(ReportKind::Error, (), self.span.start);
+        if self.backtrace.status() == BacktraceStatus::Captured {
+            builder = builder.with_note(self.backtrace.to_string());
+        }
+
         match &self.kind {
             ErrorKind::UnexpectedEof => builder.with_message("Unexpected end of file").finish(),
             ErrorKind::ExpectedType => builder
@@ -193,10 +209,7 @@ impl Error {
 
 impl Default for Error {
     fn default() -> Self {
-        Self {
-            kind: ErrorKind::Other(String::new()),
-            span: Default::default(),
-        }
+        Self::new(ErrorKind::Other(String::new()), Default::default())
     }
 }
 
@@ -222,10 +235,7 @@ where
                 IoErrorKind::UnexpectedEof => ErrorKind::UnexpectedEof,
                 _ => ErrorKind::Other(format!("{}", e)),
             };
-            Err(Error {
-                kind,
-                span: Span::default(),
-            })
+            Err(Error::new(kind, Span::default()))
         }
     }
 }
