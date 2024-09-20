@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use brig_ast::{AstNode, Block, LitTy, Stmt, Ty, TyKind};
 use brig_diagnostic::Result;
 
@@ -5,6 +7,7 @@ use crate::TypeChecker;
 
 impl TypeChecker {
     pub fn check_block(&mut self, block: &mut Block, ty: Option<&Ty>) -> Result<Ty> {
+        self.symbols.push(HashMap::new());
         for stmt in &mut block.stmts {
             self.check_statement(stmt, None)?;
         }
@@ -25,6 +28,7 @@ impl TypeChecker {
                 span: block.span(),
             }
         };
+        self.symbols.pop();
         Ok(ty)
     }
 }

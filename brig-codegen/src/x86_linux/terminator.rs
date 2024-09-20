@@ -50,7 +50,7 @@ impl X86Linux {
         if operand != Expression::None {
             self.nodes.push(AssemblyNode {
                 instruction: Instruction::Mov,
-                size: expr.ty.get().size(),
+                size: expr.ty.lock().size(),
                 left: operand,
                 right: Expression::Register(scratch::RAX),
             });
@@ -99,27 +99,27 @@ impl X86Linux {
                     kind: OperandKind::Consume(Lvalue::Temp(*temp)),
                     ty: temp.ty,
                 });
-                self.process_operand_if(graph, operand, temp.ty.get().size(), then_label.clone());
+                self.process_operand_if(graph, operand, temp.ty.lock().size(), then_label.clone());
             }
             Rvalue::Variable(var) => {
                 let operand = self.process_operand(&Operand {
                     kind: OperandKind::Consume(Lvalue::Variable(var.clone())),
                     ty: var.ty,
                 });
-                self.process_operand_if(graph, operand, var.ty.get().size(), then_label.clone());
+                self.process_operand_if(graph, operand, var.ty.lock().size(), then_label.clone());
             }
             Rvalue::FieldAccess(var, field) => {
                 let field = *field;
                 let operand = self.process_field_access(var, field);
-                let field_ty = var.get_field_ty(field);
-                self.process_operand_if(graph, operand, field_ty.get().size(), then_label.clone());
+                let (_offfset, field_ty) = var.get_field_properties(field);
+                self.process_operand_if(graph, operand, field_ty.lock().size(), then_label.clone());
             }
             Rvalue::IntegerLit(ty, lit) => {
                 let operand = self.process_operand(&Operand {
                     kind: OperandKind::IntegerLit(*ty, *lit),
                     ty: *ty,
                 });
-                self.process_operand_if(graph, operand, ty.get().size(), then_label.clone());
+                self.process_operand_if(graph, operand, ty.lock().size(), then_label.clone());
             }
             Rvalue::Unit => panic!("unit rvalue in if condition"),
             Rvalue::BinaryExpr(op, lhs, rhs) => {
@@ -127,7 +127,7 @@ impl X86Linux {
                     let left = self.process_operand(rhs);
                     let right = self.process_operand(lhs);
                     debug_assert_eq!(lhs.ty, rhs.ty);
-                    let size = lhs.ty.get().size();
+                    let size = lhs.ty.lock().size();
 
                     let right = match right {
                         Expression::Register(x) => Expression::Register(x),

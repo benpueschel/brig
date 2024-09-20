@@ -136,7 +136,7 @@ impl CodeGenerator for X86Linux {
 
         for (i, param) in graph.fn_params.iter().enumerate() {
             let var = graph.find_declaration(*param).var.clone();
-            let size = var.ty.get().size();
+            let size = var.ty.lock().size();
             let expr = self.process_variable(var);
             if i < FN_CALL_REGISTERS.len() {
                 self.nodes.push(AssemblyNode {
@@ -205,12 +205,41 @@ impl X86Linux {
                 debug_assert_eq!(lhs.ty(), rhs.ty);
                 let ty = rhs.ty;
 
-                self.nodes.push(AssemblyNode {
-                    instruction: Instruction::Mov,
-                    left,
-                    right,
-                    size: ty.get().size(),
-                });
+                let size = { ty.lock().size() };
+                if size <= 8 {
+                    self.nodes.push(AssemblyNode {
+                        instruction: Instruction::Mov,
+                        left,
+                        right,
+                        size,
+                    });
+                    return;
+                }
+                let size = size as i64;
+                let stack_offset = self.register_graph.stack_offset;
+
+                let mut offset = 0;
+                while offset < size {
+                    let instr_size = 8.min(size - offset).unsigned_abs() as usize;
+                    let left = Expression::Memory(Symbol::intern(&format!(
+                        "{}({})",
+                        stack_offset + offset,
+                        ScratchRegisters::get_name(scratch::RBP, instr_size)
+                    )));
+                    let right = Expression::Memory(Symbol::intern(&format!(
+                        "{}({})",
+                        stack_offset + offset,
+                        ScratchRegisters::get_name(scratch::RBP, instr_size)
+                    )));
+                    self.nodes.push(AssemblyNode {
+                        instruction: Instruction::Mov,
+                        left,
+                        right,
+                        size: instr_size,
+                    });
+                    // move 8 bytes at a time, or the remaining bytes if less than 8
+                    offset += instr_size as i64;
+                }
             }
             StatementKind::Modify(lhs, op, rhs) => {
                 let right = self.process_lvalue(lhs);
@@ -220,7 +249,7 @@ impl X86Linux {
                 let instruction = self.get_instruction(op);
                 self.nodes.push(AssemblyNode {
                     instruction,
-                    size: rhs.ty.get().size(),
+                    size: rhs.ty.lock().size(),
                     left,
                     right,
                 });
@@ -254,14 +283,14 @@ impl X86Linux {
             if i < FN_CALL_REGISTERS.len() {
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Mov,
-                    size: arg.ty.get().size(),
+                    size: arg.ty.lock().size(),
                     left: expr,
                     right: Expression::Register(FN_CALL_REGISTERS[i]),
                 });
             } else {
                 self.nodes.push(AssemblyNode {
                     instruction: Instruction::Push,
-                    size: arg.ty.get().size(),
+                    size: arg.ty.lock().size(),
                     left: expr,
                     right: Expression::None,
                 });
@@ -285,7 +314,13 @@ impl X86Linux {
         }
 
         // TODO: get return type and size, check how that changes the abi
-        Expression::Register(scratch::RAX)
+        let size = { call.ty.ret.lock().size() };
+
+        match size {
+            0..=8 => Expression::Register(scratch::RAX),
+            // TODO: 9..=16 => make a struct with two registers
+            size => todo!("Unsupported return size: {}", size),
+        }
     }
 
     fn process_register_node(&mut self, node: RegisterNode) -> Expression {
@@ -310,14 +345,32 @@ impl X86Linux {
             OperandKind::Consume(lvalue) => self.process_lvalue(lvalue),
             OperandKind::FunctionCall(call) => self.process_function_call(call),
             OperandKind::IntegerLit(_ty, x) => Expression::IntegerLiteral(*x),
-            OperandKind::FieldAccess(lvalue, symbol) => self.process_field_access(lvalue, *symbol),
             OperandKind::Unit => Expression::None,
         }
     }
 
     fn process_field_access(&mut self, var: &Var, field: Symbol) -> Expression {
-        let field_ty = var.get_field_ty(field);
-        todo!("process field access")
+        let (offset, _field_ty) = var.get_field_properties(field);
+        let node = self
+            .register_graph
+            .node_data(var.clone().into())
+            .unwrap_or_else(|| {
+                panic!("Node {} not found in register graph", var);
+            });
+        match node.location {
+            scratch::ScratchLocation::Register(reg) => panic!(
+                "Field access on variable {}, which is in register {}",
+                var, reg
+            ),
+            scratch::ScratchLocation::Stack(stack_offset) => {
+                Expression::Memory(Symbol::intern(&format!(
+                    "{}({})",
+                    stack_offset + offset as i64,
+                    ScratchRegisters::get_name(scratch::RBP, 8)
+                )))
+            }
+            scratch::ScratchLocation::Unassigned => panic!("Unassigned variable {}", var),
+        }
     }
 
     fn process_binary_expr(
@@ -349,7 +402,7 @@ impl X86Linux {
         let left = self.process_operand(&lhs);
         let right = self.process_operand(&rhs);
         debug_assert_eq!(lhs.ty, rhs.ty);
-        let size = lhs.ty.get().size();
+        let size = lhs.ty.lock().size();
 
         self.nodes.push(AssemblyNode {
             instruction: instr,
@@ -369,7 +422,7 @@ impl X86Linux {
         let left = self.process_operand(&lhs);
         let right = self.process_operand(&rhs);
         debug_assert_eq!(lhs.ty, rhs.ty);
-        let size = lhs.ty.get().size();
+        let size = lhs.ty.lock().size();
 
         self.nodes.push(AssemblyNode {
             instruction: Instruction::Cmp,

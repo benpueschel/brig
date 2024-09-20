@@ -78,9 +78,8 @@ fn resolve_symbols_in_rvalue(ir: &mut Ir, rvalue: &mut Rvalue, scope: Scope) {
 }
 fn resolve_symbols_in_lvalue(ir: &mut Ir, lvalue: &mut Lvalue, scope: Scope) {
     match lvalue {
-        Lvalue::FieldAccess(var, field) => {
+        Lvalue::FieldAccess(var, _field) => {
             resolve_symbol(ir, var, scope);
-            var.get_field_ty(*field);
         }
         Lvalue::Variable(var) => {
             resolve_symbol(ir, var, scope);
@@ -95,9 +94,6 @@ fn resolve_symbols_in_operand(ir: &mut Ir, operand: &mut Operand, scope: Scope) 
         }
         OperandKind::Unit => {}
         OperandKind::IntegerLit(_, _) => {}
-        OperandKind::FieldAccess(var, _) => {
-            resolve_symbol(ir, var, scope);
-        }
         OperandKind::FunctionCall(call) => {
             for arg in &mut call.args {
                 resolve_symbols_in_operand(ir, arg, scope);

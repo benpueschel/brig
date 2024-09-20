@@ -1,4 +1,5 @@
 use std::{
+    backtrace::{Backtrace, BacktraceStatus},
     fmt::Display,
     ops::Deref,
     sync::{LazyLock, Mutex, MutexGuard},
@@ -36,14 +37,24 @@ impl Deref for TyHandle<'_> {
     }
 }
 
+impl<'ctx> TyHandle<'ctx> {
+    pub fn idx(&self) -> TyIdx {
+        self.idx
+    }
+    pub fn size(&self) -> usize {
+        self.types[self.idx.0].size(&self.types)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ty {
     pub kind: TyKind,
 }
 
 impl Ty {
-    pub fn size(&self) -> usize {
-        self.kind.size()
+    #[inline]
+    pub fn size(&self, types: &[Ty]) -> usize {
+        self.kind.size(types)
     }
 }
 
@@ -58,7 +69,7 @@ pub struct TyIdx(pub usize);
 
 impl TyIdx {
     /// Get the type from the global type table.
-    pub fn get<'ctx>(&self) -> TyHandle<'ctx> {
+    pub fn lock<'ctx>(&self) -> TyHandle<'ctx> {
         let types = TYPES.lock().expect("failed to lock global type table");
         TyHandle { idx: *self, types }
     }
@@ -91,14 +102,14 @@ impl Display for TyKind {
 
 impl TyKind {
     #[inline]
-    pub fn size(&self) -> usize {
+    pub fn size(&self, types: &[Ty]) -> usize {
         match self {
             TyKind::Int(int) => int.size(),
             TyKind::Uint(uint) => uint.size(),
             TyKind::Bool => 1,
             TyKind::Unit => 0,
-            TyKind::Adt(adt) => adt.size(),
-            TyKind::Fn(fn_ty) => fn_ty.size(),
+            TyKind::Adt(adt) => adt.size(types),
+            TyKind::Fn(fn_ty) => fn_ty.size(types),
             TyKind::Unresolved => usize::MAX,
         }
     }
@@ -159,16 +170,16 @@ impl Display for FnTy {
             if i > 0 {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", *arg.get())?;
+            write!(f, "{}", *arg.lock())?;
         }
-        write!(f, "): {}", *self.ret.get())
+        write!(f, "): {}", *self.ret.lock())
     }
 }
 
 impl FnTy {
     #[inline]
-    pub fn size(&self) -> usize {
-        self.ret.get().size()
+    pub fn size(&self, types: &[Ty]) -> usize {
+        types[self.ret.0].size(types)
     }
 }
 
@@ -187,9 +198,9 @@ impl Display for Adt {
 
 impl Adt {
     #[inline]
-    pub fn size(&self) -> usize {
+    pub fn size(&self, types: &[Ty]) -> usize {
         match self {
-            Adt::Struct(s) => s.size(),
+            Adt::Struct(s) => s.size(types),
         }
     }
 }
@@ -208,8 +219,8 @@ impl Display for Struct {
 
 impl Struct {
     #[inline]
-    pub fn size(&self) -> usize {
-        self.fields.iter().map(|field| field.size()).sum()
+    pub fn size(&self, types: &[Ty]) -> usize {
+        self.fields.iter().map(|field| field.size(types)).sum()
     }
 
     #[inline]
@@ -219,7 +230,8 @@ impl Struct {
             if f == field {
                 return offset;
             }
-            offset += f.size();
+            // TODO: this may result in deadlocks
+            offset += f.lock_size();
         }
         panic!("field not found in struct");
     }
@@ -233,7 +245,11 @@ pub struct Field {
 
 impl Field {
     #[inline]
-    pub fn size(&self) -> usize {
-        self.ty.get().size()
+    pub fn size(&self, types: &[Ty]) -> usize {
+        types[self.ty.0].kind.size(types)
+    }
+    #[inline]
+    pub fn lock_size(&self) -> usize {
+        self.ty.lock().size()
     }
 }

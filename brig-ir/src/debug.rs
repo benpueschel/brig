@@ -68,7 +68,7 @@ impl Display for Ir {
 
 impl Display for Var {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.ident, *self.ty.get())
+        write!(f, "{}: {}", self.ident, *self.ty.lock())
     }
 }
 
@@ -186,7 +186,6 @@ impl Display for OperandKind {
             OperandKind::Consume(lvalue) => write!(f, "{}", lvalue),
             OperandKind::IntegerLit(_, int) => write!(f, "{}", int),
             OperandKind::FunctionCall(call) => write!(f, "{}", call),
-            OperandKind::FieldAccess(operand, field) => write!(f, "{}.{}", operand, field),
             OperandKind::Unit => write!(f, "()"),
         }
     }

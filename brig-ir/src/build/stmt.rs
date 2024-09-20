@@ -1,7 +1,10 @@
 use brig_ast::{AstNode, Expr, LetDecl, ReturnStmt};
 use brig_diagnostic::{Error, Result};
 
-use crate::{resolve, Lvalue, Operand, Scope, Statement, StatementKind, Terminator, Var, VarDecl};
+use crate::{
+    resolve, Lvalue, Operand, OperandKind, Scope, Statement, StatementKind, Terminator, Var,
+    VarDecl,
+};
 
 type Res = Result<Option<Operand>>;
 impl crate::Ir {
@@ -24,6 +27,7 @@ impl crate::Ir {
                 let rhs = self.traverse_expr(*rhs, scope)?.ok_or_else(|| {
                     Error::other("right-hand side of assignment is not an rvalue", span)
                 })?;
+                let rhs = self.assign_copy(&lhs, rhs, span, scope)?;
                 self.current_block_mut().statements.push(Statement {
                     kind: StatementKind::Assign(lhs, rhs),
                     span,
@@ -57,13 +61,15 @@ impl crate::Ir {
         }
         let expr = data.expr.unwrap();
         let span = expr.span();
+        let var = Lvalue::Variable(var);
 
         let operand = self
             .traverse_expr(expr, scope)?
             .expect("Expected an operand");
+        let operand = self.assign_copy(&var, operand, span, scope)?;
 
         self.current_block_mut().statements.push(crate::Statement {
-            kind: StatementKind::Assign(Lvalue::Variable(var), operand.clone()),
+            kind: StatementKind::Assign(var, operand.clone()),
             span,
         });
 
