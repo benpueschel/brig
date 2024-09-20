@@ -61,7 +61,7 @@ fn get_instruction_name(instruction: &Instruction, type_size: usize) -> String {
         2 => get_instruction_name_16(instruction).into(),
         4 => get_instruction_name_32(instruction).into(),
         8 => get_instruction_name_64(instruction).into(),
-        _ => panic!("Invalid type size"),
+        _ => panic!("Invalid type size: {}", type_size),
     }
 }
 

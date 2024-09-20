@@ -170,7 +170,7 @@ pub enum Lvalue {
 impl Lvalue {
     pub fn ty(&self) -> brig_ty::TyIdx {
         match self {
-            Lvalue::FieldAccess(var, symbol) => var.get_field_ty(*symbol),
+            Lvalue::FieldAccess(var, symbol) => var.get_field_properties(*symbol).1,
             Lvalue::Variable(var) => var.ty,
             Lvalue::Temp(temp) => temp.ty,
         }
@@ -193,7 +193,7 @@ impl Rvalue {
         match self {
             Rvalue::IntegerLit(ty, _) => *ty,
             Rvalue::Variable(var) => var.ty,
-            Rvalue::FieldAccess(var, field) => var.get_field_ty(*field),
+            Rvalue::FieldAccess(var, field) => var.get_field_properties(*field).1,
             Rvalue::Temp(temp) => temp.ty,
             Rvalue::BinaryExpr(_, lhs, _) => lhs.ty,
             Rvalue::Call(call) => call.ty.ret,
@@ -244,7 +244,6 @@ pub enum OperandKind {
     Consume(Lvalue),
     IntegerLit(TyIdx, usize),
     FunctionCall(FunctionCall),
-    FieldAccess(Var, Symbol),
     Unit,
 }
 
@@ -260,7 +259,6 @@ impl From<OperandKind> for Rvalue {
             OperandKind::Consume(lvalue) => lvalue.into(),
             OperandKind::IntegerLit(ty, value) => Rvalue::IntegerLit(ty, value),
             OperandKind::FunctionCall(call) => Rvalue::Call(call),
-            OperandKind::FieldAccess(var, field) => Rvalue::FieldAccess(var, field),
             OperandKind::Unit => panic!("unit operand is not a valid rvalue"),
         }
     }
@@ -286,7 +284,7 @@ impl TempVal {
         self.index
     }
     pub fn size(&self) -> usize {
-        self.ty.get().size()
+        self.ty.lock().size()
     }
 }
 
@@ -304,23 +302,24 @@ pub struct Var {
 }
 
 impl Var {
-    pub fn get_field_ty(&self, field: Symbol) -> TyIdx {
-        let get = self.ty.get();
-        match &get.kind {
-            TyKind::Int(_) => panic!("Field access on int"),
+    pub fn get_field_properties(&self, field: Symbol) -> (usize, TyIdx) {
+        // This is in a block to release the lock as soon as possible
+        let kind = { self.ty.lock().kind.clone() };
+        match kind {
+            // TyKind::Int(_) => panic!("Field access on int"),
             TyKind::Uint(_) => panic!("Field access on uint"),
             TyKind::Bool => panic!("Field access on bool"),
             TyKind::Unit => panic!("Field access on unit (wtf)"),
             TyKind::Adt(adt) => match adt {
                 Adt::Struct(s) => {
-                    let field = s
-                        .fields
-                        .iter()
-                        .find(|f| f.name == field)
-                        .unwrap_or_else(|| {
-                            panic!("Field {} not found in struct {}", field, s.name)
-                        });
-                    field.ty
+                    let mut offset = 0;
+                    for f in &s.fields {
+                        if f.name == field {
+                            return (offset, f.ty);
+                        }
+                        offset += f.ty.lock().size();
+                    }
+                    panic!("Field {} not found", field);
                 }
             },
             TyKind::Fn(_) => panic!("Field access on fn"),

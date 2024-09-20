@@ -1,5 +1,7 @@
 use brig_ast::{AstNode, BinExpr, CallExpr, Expr, IfExpr};
+use brig_common::Span;
 use brig_diagnostic::{Error, Result};
+use brig_ty::{Adt, TyKind};
 
 use crate::{
     resolve, FunctionCall, Lvalue, Operand, OperandKind, Rvalue, Scope, Statement, StatementKind,
@@ -219,7 +221,6 @@ impl crate::Ir {
                 kind: StatementKind::Assign(op, then_op.clone()),
             });
         }
-        let op = op.expect("then block must return a value");
 
         // Terminator for the last block of the then branch, point to the target block
         self.current_block_mut().terminator = Some(Terminator {
@@ -232,11 +233,21 @@ impl crate::Ir {
             Some(else_block) => {
                 let (else_block, else_op) =
                     self.traverse_block(else_block, scope, Some(current))?;
-                if let Some(else_op) = else_op {
-                    self.current_block_mut().statements.push(Statement {
-                        span: if_expr.span,
-                        kind: StatementKind::Assign(Lvalue::Temp(op), else_op),
-                    });
+
+                match (else_op, op) {
+                    (Some(else_op), Some(op)) => {
+                        self.current_block_mut().statements.push(Statement {
+                            span: if_expr.span,
+                            kind: StatementKind::Assign(Lvalue::Temp(op), else_op),
+                        });
+                    }
+                    (None, None) => {}
+                    (None, Some(_)) => {
+                        panic!("else block did not return an operand, but then block did.")
+                    }
+                    (Some(_), None) => {
+                        panic!("else block returned an operand, but then block did not.")
+                    }
                 }
 
                 // Terminator for the last block of the else branch, point to the target block
@@ -268,7 +279,7 @@ impl crate::Ir {
             scope,
         });
 
-        Ok(Some(Operand {
+        Ok(op.map(|op| Operand {
             ty: op.ty,
             kind: OperandKind::Consume(Lvalue::Temp(op)),
         }))
@@ -301,6 +312,63 @@ impl crate::Ir {
             args,
             ty,
         })
+    }
+
+    pub fn assign_copy(
+        &mut self,
+        lhs: &Lvalue,
+        rhs: Operand,
+        span: Span,
+        scope: Scope,
+    ) -> Result<Operand> {
+        debug_assert_eq!(
+            lhs.ty(),
+            rhs.ty,
+            "Type mismatch: expected {:?}, got {:?}",
+            lhs.ty(),
+            rhs.ty
+        );
+
+        if let OperandKind::Consume(lvalue) = &rhs.kind {
+            Ok(match lvalue {
+                Lvalue::Variable(var) => {
+                    let temp = self.alloc_temp(var.ty, scope);
+                    self.current_block_mut().statements.push(Statement {
+                        span,
+                        kind: StatementKind::Assign(Lvalue::Temp(temp), rhs.clone()),
+                    });
+                    Operand {
+                        ty: var.ty,
+                        kind: OperandKind::Consume(Lvalue::Temp(temp)),
+                    }
+                }
+                Lvalue::FieldAccess(var, field) => {
+                    let ty = { var.ty.lock().kind.clone() };
+                    let ty = match ty {
+                        TyKind::Adt(Adt::Struct(s)) => s
+                            .fields
+                            .iter()
+                            .find_map(|f| if f.name == *field { Some(f.ty) } else { None })
+                            .ok_or_else(|| {
+                                Error::other(format!("field '{}' not found on struct", field), span)
+                            })?,
+                        _ => return Err(Error::other("field access on non-struct", span)),
+                    };
+                    let temp = self.alloc_temp(ty, scope);
+                    self.current_block_mut().statements.push(Statement {
+                        span,
+                        kind: StatementKind::Assign(Lvalue::Temp(temp), rhs.clone()),
+                    });
+                    Operand {
+                        ty: var.ty,
+                        kind: OperandKind::Consume(Lvalue::Temp(temp)),
+                    }
+                }
+                Lvalue::Temp(_) => rhs,
+            })
+        } else {
+            Ok(rhs)
+        }
     }
 
     pub fn alloc_temp(&mut self, ty: brig_ty::TyIdx, scope: Scope) -> TempVal {

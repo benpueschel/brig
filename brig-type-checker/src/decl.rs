@@ -16,7 +16,8 @@ impl TypeChecker {
     /// TODO: check for cyclic dependencies
     pub fn check_struct_declaration(&mut self, decl: &mut StructDecl) -> Result<()> {
         let mut fields = thin_vec![];
-        for field in &decl.fields {
+        for field in &mut decl.fields {
+            self.check_ty(&mut field.ty)?;
             self.add_symbol(field.name.name, field.ty.clone());
             fields.push(Field {
                 name: field.name,

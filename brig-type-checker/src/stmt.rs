@@ -1,4 +1,4 @@
-use brig_ast::{Stmt, Ty, LetDecl};
+use brig_ast::{LetDecl, Stmt, Ty};
 use brig_diagnostic::{Error, Result};
 
 use crate::TypeChecker;
@@ -16,6 +16,7 @@ impl TypeChecker {
         }
     }
     pub fn check_variable_declaration(&mut self, decl: &mut LetDecl) -> Result<()> {
+        self.check_ty(&mut decl.ty)?;
         if let Some(ref mut expr) = decl.expr {
             let ty = self.check_expression(expr, Some(&decl.ty))?;
             if ty.kind != decl.ty.kind {
@@ -24,8 +25,8 @@ impl TypeChecker {
                     (decl.ty.kind.clone(), decl.span),
                 ));
             }
-            self.add_symbol(decl.name.name, ty);
         }
+        self.add_symbol(decl.name.name, decl.ty.clone());
         Ok(())
     }
 }
@@ -87,9 +88,6 @@ mod test {
         tc.check_variable_declaration(&mut decl)
             .expect("type check failed");
 
-        assert_eq!(
-            decl.ty.kind,
-            TyKind::Lit(LitTy::Uint(UintTy::U32))
-        );
+        assert_eq!(decl.ty.kind, TyKind::Lit(LitTy::Uint(UintTy::U32)));
     }
 }

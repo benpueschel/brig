@@ -40,13 +40,15 @@ impl Ir {
 
         for field in init.fields {
             let span = field.span();
+            let lhs = Lvalue::FieldAccess(var.clone(), field.name.name);
             let op = self
                 .traverse_expr(field.expr, scope)?
                 .ok_or_else(|| Error::other("field expression is not an rvalue", span))?;
+            let op = self.assign_copy(&lhs, op, span, scope)?;
 
             let stmts = &mut self.current_block_mut().statements;
             stmts.push(Statement {
-                kind: StatementKind::Assign(Lvalue::FieldAccess(var.clone(), field.name.name), op),
+                kind: StatementKind::Assign(lhs, op),
                 span,
             });
         }
