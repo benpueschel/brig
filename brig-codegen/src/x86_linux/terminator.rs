@@ -48,12 +48,20 @@ impl X86Linux {
     fn process_return(&mut self, expr: &Operand) {
         let operand = self.process_operand(expr);
         if operand != Expression::None {
-            self.nodes.push(AssemblyNode {
-                instruction: Instruction::Mov,
-                size: expr.ty.lock().size(),
-                left: operand,
-                right: Expression::Register(scratch::RAX),
-            });
+            // TODO: get return type and size, check how that changes the abi
+            let size = { expr.ty.lock().size() };
+            match size {
+                0..=8 => {
+                    self.nodes.push(AssemblyNode {
+                        instruction: Instruction::Mov,
+                        left: operand,
+                        right: Expression::Register(scratch::RAX),
+                        size,
+                    });
+                }
+                // TODO: 9..=16 => return in rax and rdx
+                size => todo!("Unsupported return size: {}", size),
+            }
         }
         self.nodes.push(AssemblyNode {
             instruction: Instruction::Jmp(JumpCondition::None),
@@ -63,13 +71,7 @@ impl X86Linux {
         });
     }
 
-    fn process_operand_if(
-        &mut self,
-        graph: &mut Ir,
-        expr: Expression,
-        size: usize,
-        then_label: Expression,
-    ) {
+    fn process_operand_if(&mut self, expr: Expression, size: usize, then_label: Expression) {
         self.nodes.push(AssemblyNode {
             instruction: Instruction::Cmp,
             left: Expression::IntegerLiteral(0),
@@ -99,27 +101,27 @@ impl X86Linux {
                     kind: OperandKind::Consume(Lvalue::Temp(*temp)),
                     ty: temp.ty,
                 });
-                self.process_operand_if(graph, operand, temp.ty.lock().size(), then_label.clone());
+                self.process_operand_if(operand, temp.ty.lock().size(), then_label.clone());
             }
             Rvalue::Variable(var) => {
                 let operand = self.process_operand(&Operand {
                     kind: OperandKind::Consume(Lvalue::Variable(var.clone())),
                     ty: var.ty,
                 });
-                self.process_operand_if(graph, operand, var.ty.lock().size(), then_label.clone());
+                self.process_operand_if(operand, var.ty.lock().size(), then_label.clone());
             }
             Rvalue::FieldAccess(var, field) => {
                 let field = *field;
                 let operand = self.process_field_access(var, field);
                 let (_offfset, field_ty) = var.get_field_properties(field);
-                self.process_operand_if(graph, operand, field_ty.lock().size(), then_label.clone());
+                self.process_operand_if(operand, field_ty.lock().size(), then_label.clone());
             }
             Rvalue::IntegerLit(ty, lit) => {
                 let operand = self.process_operand(&Operand {
                     kind: OperandKind::IntegerLit(*ty, *lit),
                     ty: *ty,
                 });
-                self.process_operand_if(graph, operand, ty.lock().size(), then_label.clone());
+                self.process_operand_if(operand, ty.lock().size(), then_label.clone());
             }
             Rvalue::Unit => panic!("unit rvalue in if condition"),
             Rvalue::BinaryExpr(op, lhs, rhs) => {
@@ -156,7 +158,7 @@ impl X86Linux {
                 } else {
                     let (size, expr) =
                         self.process_binary_expr(op.clone(), rhs.clone(), lhs.clone());
-                    self.process_operand_if(graph, expr, size, then_label.clone());
+                    self.process_operand_if(expr, size, then_label.clone());
                 }
             }
         }
