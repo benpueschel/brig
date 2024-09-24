@@ -1,10 +1,7 @@
 use brig_ast::{AstNode, Expr, LetDecl, ReturnStmt};
 use brig_diagnostic::{Error, Result};
 
-use crate::{
-    resolve, Lvalue, Operand, OperandKind, Scope, Statement, StatementKind, Terminator, Var,
-    VarDecl,
-};
+use crate::{resolve, Lvalue, Operand, Scope, Statement, StatementKind, Terminator, Var, VarDecl};
 
 type Res = Result<Option<Operand>>;
 impl crate::Ir {

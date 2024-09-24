@@ -1,5 +1,4 @@
 use std::{
-    backtrace::{Backtrace, BacktraceStatus},
     fmt::Display,
     ops::Deref,
     sync::{LazyLock, Mutex, MutexGuard},

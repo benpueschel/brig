@@ -141,7 +141,7 @@ impl RegisterGraph {
 
     fn process_lvalue(&mut self, lvalue: &Lvalue) {
         match lvalue {
-            Lvalue::FieldAccess(var, field) => {
+            Lvalue::FieldAccess(_var, _field) => {
                 // TODO: figure out if we need to do anything here
             }
             Lvalue::Variable(var) => {
@@ -192,7 +192,7 @@ impl RegisterGraph {
             Rvalue::Temp(temp) => {
                 let _node = self.get_node_or_insert((*temp).into());
             }
-            Rvalue::FieldAccess(op, sym) => {
+            Rvalue::FieldAccess(_op, _sym) => {
                 todo!();
             }
         };
