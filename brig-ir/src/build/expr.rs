@@ -223,11 +223,13 @@ impl crate::Ir {
         }
 
         // Terminator for the last block of the then branch, point to the target block
-        self.current_block_mut().terminator = Some(Terminator {
-            kind: TerminatorKind::Goto { target },
-            span: if_expr.span,
-            scope,
-        });
+        if self.current_block().terminator.is_none() {
+            self.current_block_mut().terminator = Some(Terminator {
+                kind: TerminatorKind::Goto { target },
+                span: if_expr.span,
+                scope,
+            });
+        }
 
         let else_block = match if_expr.else_block {
             Some(else_block) => {
@@ -251,11 +253,13 @@ impl crate::Ir {
                 }
 
                 // Terminator for the last block of the else branch, point to the target block
-                self.current_block_mut().terminator = Some(Terminator {
-                    kind: TerminatorKind::Goto { target },
-                    span: if_expr.span,
-                    scope,
-                });
+                if self.current_block().terminator.is_none() {
+                    self.current_block_mut().terminator = Some(Terminator {
+                        kind: TerminatorKind::Goto { target },
+                        span: if_expr.span,
+                        scope,
+                    });
+                }
                 else_block
             }
             None => target,

@@ -3,8 +3,19 @@ struct Vec2 {
 	y: u32,
 }
 
+struct Vec4 {
+	a: Vec2,
+	b: Vec2,
+}
+
+extern fn debug_print(a: u32);
+
 extern fn vec2(x: u32, y: u32): Vec2 {
 	return struct Vec2 { x: x, y: y };
+}
+
+extern fn vec4(a: Vec2, b: Vec2): Vec4 {
+	return struct Vec4 { a: a, b: b };
 }
 
 extern fn max(a: u32, b: u32): u32 {

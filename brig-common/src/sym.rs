@@ -75,13 +75,13 @@ pub struct IntStr<'ctx> {
     sym: &'ctx Symbol,
 }
 
-impl<'a> Display for IntStr<'a> {
+impl Display for IntStr<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.deref())
     }
 }
 
-impl<'a> Deref for IntStr<'a> {
+impl Deref for IntStr<'_> {
     type Target = String;
 
     fn deref(&self) -> &Self::Target {
