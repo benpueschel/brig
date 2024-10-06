@@ -43,6 +43,9 @@ impl TypeChecker {
         }
 
         self.check_ty(&mut decl.return_ty)?;
+        for param in decl.parameters.iter_mut() {
+            self.check_ty(&mut param.ty)?;
+        }
 
         let kind = TyKind::Fn(FnTy {
             name: decl.name.name,
