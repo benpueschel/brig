@@ -221,16 +221,8 @@ impl X86Linux {
                 let mut offset = 0;
                 while offset < size {
                     let instr_size = 8.min(size - offset).unsigned_abs() as usize;
-                    let left = Expression::Memory(Symbol::intern(&format!(
-                        "{}({})",
-                        stack_offset + offset,
-                        ScratchRegisters::get_name(scratch::RBP, instr_size)
-                    )));
-                    let right = Expression::Memory(Symbol::intern(&format!(
-                        "{}({})",
-                        stack_offset + offset,
-                        ScratchRegisters::get_name(scratch::RBP, instr_size)
-                    )));
+                    let left = Expression::StackOffset(stack_offset + offset);
+                    let right = Expression::StackOffset(stack_offset + offset);
                     self.nodes.push(AssemblyNode {
                         instruction: Instruction::Mov,
                         left,
@@ -329,13 +321,7 @@ impl X86Linux {
         });
         match node_data.location {
             scratch::ScratchLocation::Register(register) => Expression::Register(register),
-            scratch::ScratchLocation::Stack(offset) => {
-                Expression::Memory(Symbol::intern(&format!(
-                    "{}({})",
-                    offset,
-                    ScratchRegisters::get_name(scratch::RBP, 8)
-                )))
-            }
+            scratch::ScratchLocation::Stack(offset) => Expression::StackOffset(offset),
             scratch::ScratchLocation::Unassigned => panic!("Unassigned register"),
         }
     }
@@ -363,11 +349,7 @@ impl X86Linux {
                 var, reg
             ),
             scratch::ScratchLocation::Stack(stack_offset) => {
-                Expression::Memory(Symbol::intern(&format!(
-                    "{}({})",
-                    stack_offset + offset as i64,
-                    ScratchRegisters::get_name(scratch::RBP, 8)
-                )))
+                Expression::StackOffset(stack_offset + offset as i64)
             }
             scratch::ScratchLocation::Unassigned => panic!("Unassigned variable {}", var),
         }

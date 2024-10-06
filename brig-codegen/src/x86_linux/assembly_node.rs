@@ -40,7 +40,8 @@ pub enum JumpCondition {
 pub enum Expression {
     IntegerLiteral(usize),
     Register(scratch::Register),
-    Memory(Symbol),
+    StackOffset(i64),
+    // Memory(Symbol), TODO: do we need this?
     Label(Symbol),
     None,
 }
@@ -55,7 +56,8 @@ impl Debug for Expression {
                 reg,
                 ScratchRegisters::get_name(*reg, 8)
             ),
-            Expression::Memory(x) => write!(f, "Memory({})", x),
+            // Expression::Memory(x) => write!(f, "Memory({})", x),
+            Expression::StackOffset(x) => write!(f, "StackOffset({})", x),
             Expression::Label(x) => write!(f, "Label({})", x),
             Expression::None => write!(f, "None"),
         }

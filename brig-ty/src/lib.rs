@@ -36,7 +36,7 @@ impl Deref for TyHandle<'_> {
     }
 }
 
-impl<'ctx> TyHandle<'ctx> {
+impl TyHandle<'_> {
     pub fn idx(&self) -> TyIdx {
         self.idx
     }

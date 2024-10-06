@@ -47,10 +47,10 @@ impl X86Linux {
 
     fn process_return(&mut self, expr: &Operand) {
         let operand = self.process_operand(expr);
-        if operand != Expression::None {
-            // TODO: get return type and size, check how that changes the abi
-            let size = { expr.ty.lock().size() };
-            match size {
+        // TODO: get return type and size, check how that changes the abi
+        let size = { expr.ty.lock().size() };
+        match &operand {
+            Expression::StackOffset(offset) => match size {
                 0..=8 => {
                     self.nodes.push(AssemblyNode {
                         instruction: Instruction::Mov,
@@ -59,8 +59,30 @@ impl X86Linux {
                         size,
                     });
                 }
-                // TODO: 9..=16 => return in rax and rdx
+                9..=16 => {
+                    self.nodes.push(AssemblyNode {
+                        instruction: Instruction::Mov,
+                        left: Expression::StackOffset(*offset),
+                        right: Expression::Register(scratch::RAX),
+                        size: 8,
+                    });
+                    self.nodes.push(AssemblyNode {
+                        instruction: Instruction::Mov,
+                        left: Expression::StackOffset(offset + 8),
+                        right: Expression::Register(scratch::RDX),
+                        size: size - 8,
+                    });
+                }
                 size => todo!("Unsupported return size: {}", size),
+            },
+            _ => {
+                assert!(size <= 8, "return size must be <= 8");
+                self.nodes.push(AssemblyNode {
+                    instruction: Instruction::Mov,
+                    left: operand,
+                    right: Expression::Register(scratch::RAX),
+                    size,
+                });
             }
         }
         self.nodes.push(AssemblyNode {
