@@ -48,8 +48,7 @@ fn get_expression(expression: &Expression, size: usize) -> String {
     match expression {
         Expression::IntegerLiteral(x) => format!("${}", x),
         Expression::Register(reg) => ScratchRegisters::get_name(*reg, size).to_string(),
-        // Expression::Memory(x) => x.to_string(),
-        Expression::StackOffset(x) => format!("{}(%rbp)", x),
+        Expression::Offset(reg, offset) => format!("{}({})", offset, reg),
         Expression::Label(x) => x.to_string(),
         Expression::None => panic!("Expression::None is not a valid expression"),
     }
