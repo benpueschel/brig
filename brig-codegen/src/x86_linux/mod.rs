@@ -221,8 +221,8 @@ impl X86Linux {
                 let mut offset = 0;
                 while offset < size {
                     let instr_size = 8.min(size - offset).unsigned_abs() as usize;
-                    let left = Expression::StackOffset(stack_offset + offset);
-                    let right = Expression::StackOffset(stack_offset + offset);
+                    let left = Expression::Offset(scratch::RBP, stack_offset + offset);
+                    let right = Expression::Offset(scratch::RBP, stack_offset + offset);
                     self.nodes.push(AssemblyNode {
                         instruction: Instruction::Mov,
                         left,
@@ -321,7 +321,7 @@ impl X86Linux {
         });
         match node_data.location {
             scratch::ScratchLocation::Register(register) => Expression::Register(register),
-            scratch::ScratchLocation::Stack(offset) => Expression::StackOffset(offset),
+            scratch::ScratchLocation::Stack(offset) => Expression::Offset(scratch::RBP, offset),
             scratch::ScratchLocation::Unassigned => panic!("Unassigned register"),
         }
     }
@@ -349,7 +349,7 @@ impl X86Linux {
                 var, reg
             ),
             scratch::ScratchLocation::Stack(stack_offset) => {
-                Expression::StackOffset(stack_offset + offset as i64)
+                Expression::Offset(scratch::RBP, stack_offset + offset as i64)
             }
             scratch::ScratchLocation::Unassigned => panic!("Unassigned variable {}", var),
         }

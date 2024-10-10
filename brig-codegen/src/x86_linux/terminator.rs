@@ -50,7 +50,7 @@ impl X86Linux {
         // TODO: get return type and size, check how that changes the abi
         let size = { expr.ty.lock().size() };
         match &operand {
-            Expression::StackOffset(offset) => match size {
+            Expression::Offset(reg, offset) => match size {
                 0..=8 => {
                     self.nodes.push(AssemblyNode {
                         instruction: Instruction::Mov,
@@ -62,13 +62,14 @@ impl X86Linux {
                 9..=16 => {
                     self.nodes.push(AssemblyNode {
                         instruction: Instruction::Mov,
-                        left: Expression::StackOffset(*offset),
+                        left: Expression::Offset(*reg, *offset),
                         right: Expression::Register(scratch::RAX),
                         size: 8,
                     });
+                    // TODO: add padding to structs
                     self.nodes.push(AssemblyNode {
                         instruction: Instruction::Mov,
-                        left: Expression::StackOffset(offset + 8),
+                        left: Expression::Offset(*reg, *offset + 8),
                         right: Expression::Register(scratch::RDX),
                         size: size - 8,
                     });

@@ -37,11 +37,11 @@ pub enum JumpCondition {
 }
 
 #[derive(Clone, PartialEq)]
+/// TODO: rename to ExpressionKind
 pub enum Expression {
     IntegerLiteral(usize),
     Register(scratch::Register),
-    StackOffset(i64),
-    // Memory(Symbol), TODO: do we need this?
+    Offset(scratch::Register, i64),
     Label(Symbol),
     None,
 }
@@ -56,8 +56,7 @@ impl Debug for Expression {
                 reg,
                 ScratchRegisters::get_name(*reg, 8)
             ),
-            // Expression::Memory(x) => write!(f, "Memory({})", x),
-            Expression::StackOffset(x) => write!(f, "StackOffset({})", x),
+            Expression::Offset(reg, offset) => write!(f, "Offset({}, {})", reg, offset),
             Expression::Label(x) => write!(f, "Label({})", x),
             Expression::None => write!(f, "None"),
         }

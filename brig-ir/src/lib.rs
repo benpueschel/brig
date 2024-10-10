@@ -306,7 +306,7 @@ impl Var {
         // This is in a block to release the lock as soon as possible
         let kind = { self.ty.lock().kind.clone() };
         match kind {
-            // TyKind::Int(_) => panic!("Field access on int"),
+            TyKind::Int(_) => panic!("Field access on int"),
             TyKind::Uint(_) => panic!("Field access on uint"),
             TyKind::Bool => panic!("Field access on bool"),
             TyKind::Unit => panic!("Field access on unit (wtf)"),
