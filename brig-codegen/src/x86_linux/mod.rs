@@ -30,7 +30,7 @@ use brig_ir::{
     BasicBlock, ExprOperator, FunctionCall, Ir, Lvalue, Operand, OperandKind, Statement,
     StatementKind, TempVal, Var, IR_START_BLOCK,
 };
-use scratch::{Register, RegisterGraph, RegisterNode, ScratchRegisters};
+use scratch::{Register, RegisterGraph, RegisterNode};
 
 use super::CodeGenerator;
 
@@ -65,7 +65,6 @@ pub struct GraphNode {
 
 pub struct X86Linux {
     fn_params: Vec<u64>,
-    registers: ScratchRegisters,
     register_graph: RegisterGraph,
     pub nodes: Vec<AssemblyNode>,
     pub labels: HashMap<BasicBlock, Expression>,
@@ -77,7 +76,6 @@ pub struct X86Linux {
 impl CodeGenerator for X86Linux {
     fn new() -> Self {
         X86Linux {
-            registers: ScratchRegisters::new(),
             nodes: vec![],
             finished_label: Expression::None,
             labels: HashMap::new(),
