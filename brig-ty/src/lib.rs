@@ -219,7 +219,14 @@ impl Display for Struct {
 impl Struct {
     #[inline]
     pub fn size(&self, types: &[Ty]) -> usize {
-        self.fields.iter().map(|field| field.size(types)).sum()
+        self.fields.iter().fold(0, |size, field| {
+            let field_size = field.size(types);
+            // pad the struct to align the fields:
+            // if the size of the struct is not a multiple of the field size, add padding
+            // to align the next field to it's own size
+            let padding = size % field_size;
+            size + padding + field_size
+        })
     }
 
     #[inline]
@@ -230,7 +237,8 @@ impl Struct {
                 return offset;
             }
             // TODO: this may result in deadlocks
-            offset += f.lock_size();
+            let size = f.lock_size();
+            offset += offset % size + size;
         }
         panic!("field not found in struct");
     }
