@@ -48,7 +48,11 @@ fn get_expression(expression: &Expression, size: usize) -> String {
     match expression {
         Expression::IntegerLiteral(x) => format!("${}", x),
         Expression::Register(reg) => ScratchRegisters::get_name(*reg, size).to_string(),
-        Expression::Offset(reg, offset) => format!("{}({})", offset, reg),
+        Expression::Offset(reg, offset) => {
+            // TODO: is this correct? I think the reg size should always be 8 since we're loading
+            // from the address stored in the register (which is a 8 byte address in x86_64)
+            format!("{}({})", offset, ScratchRegisters::get_name(*reg, 8))
+        }
         Expression::Label(x) => x.to_string(),
         Expression::None => panic!("Expression::None is not a valid expression"),
     }
