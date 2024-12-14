@@ -9,7 +9,14 @@ struct Vec4 {
   struct Vec2 a;
   struct Vec2 b;
 };
+
+struct TestAlign {
+	uint32_t a;
+	struct Vec2 b;
+};
+
 extern struct Vec2 vec2(uint32_t x, uint32_t y);
+extern struct TestAlign testAlign(uint32_t a, struct Vec2 b);
 extern struct Vec4 vec4(struct Vec2 a, struct Vec2 b);
 
 extern uint32_t max(uint32_t a, uint32_t b);
@@ -32,6 +39,11 @@ int main() {
   struct Vec4 v3 = vec4(v1, v2);
   printf("vec4(v1, v2) = ((%u, %u), (%u, %u))\n", v3.a.x, v3.a.y, v3.b.x,
          v3.b.y);
+
+  struct TestAlign ta = testAlign(5, v1);
+  printf("testAlign(5, v1) = (%u, (%u, %u))\n", ta.a, ta.b.x, ta.b.y);
+  printf("sizeof(struct TestAlign) = %lu\n", sizeof(struct TestAlign));
+
 
   return 0;
 }
